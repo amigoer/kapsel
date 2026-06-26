@@ -3,68 +3,97 @@ import KapselKit
 
 ///首选项设置视图，支持配置 CLI 路径并查看系统关于信息
 struct SettingsView: View {
+    @Environment(AppLanguageManager.self) private var languageManager
+    @Environment(EngineStatusModel.self) private var engineStatus
     @State private var cliPath: String = ""
-    @State private var engineOnline: Bool = false
     @State private var cliVersion: String = "Loading..."
     @State private var showSaveFeedback: Bool = false
     
     var body: some View {
         Form {
-            Section("Engine Executable Configuration") {
-                HStack(spacing: 8) {
-                    TextField("container CLI absolute path", text: $cliPath)
-                        .textFieldStyle(.roundedBorder)
-                    Button("Browse...") {
-                        selectCLIPath()
+            Section("General") {
+                Picker("App Language", selection: Bindable(languageManager).selectedLanguage) {
+                    ForEach(AppLanguage.allCases) { language in
+                        languageLabel(for: language).tag(language)
                     }
                 }
-                
-                // Engine status and version details
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Text("Engine Status:")
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(engineOnline ? Color.green : Color.red)
-                                .frame(width: 8, height: 8)
-                            Text(engineOnline ? LocalizedStringKey("Online") : LocalizedStringKey("Offline"))
-                                .foregroundColor(engineOnline ? .green : .red)
-                        }
-                    }
-                    
-                    HStack(spacing: 6) {
-                        Text("Engine Version:")
-                        Text(LocalizedStringKey(cliVersion))
-                            .font(.system(.body, design: .monospaced))
+                .pickerStyle(.menu)
+
+                Text("Language changes take effect immediately.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+
+            if engineStatus.isChecking {
+                Section("Engine Setup") {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Detecting container engine...")
                             .foregroundColor(.secondary)
                     }
                 }
-                .font(.footnote)
-                .padding(.vertical, 4)
-                
-                HStack {
-                    Button(action: saveSettings) {
-                        Text("Save & Apply")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    
-                    Button(action: {
-                        if let url = URL(string: "https://github.com/apple/container/releases") {
-                            NSWorkspace.shared.open(url)
+            } else if engineStatus.shouldShowInstallUI {
+                Section("Engine Setup") {
+                    EngineSetupBanner {
+                        Task {
+                            await engineStatus.refresh()
+                            syncCLIPathFromDetection()
+                            fetchCLIVersion()
                         }
-                    }) {
-                        Label("Get container engine", systemImage: "arrow.down.circle")
-                    }
-                    .buttonStyle(.bordered)
-                    
-                    if showSaveFeedback {
-                        Text("✓ Settings successfully saved and applied")
-                            .foregroundColor(.green)
-                            .font(.footnote)
-                            .transition(.opacity)
                     }
                 }
-                .padding(.top, 6)
+            }
+
+            Section("Engine Executable Configuration") {
+                if engineStatus.isCLIInstalled {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 6) {
+                            Text("Engine Status:")
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 8, height: 8)
+                                Text(LocalizedStringKey("Online"))
+                                    .foregroundColor(.green)
+                            }
+                        }
+
+                        HStack(spacing: 6) {
+                            Text("Engine Version:")
+                            Text(LocalizedStringKey(cliVersion))
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .font(.footnote)
+                    .padding(.vertical, 4)
+                }
+
+                DisclosureGroup("Advanced: Configure CLI Path Manually") {
+                    HStack(spacing: 8) {
+                        TextField("container CLI absolute path", text: $cliPath)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Browse...") {
+                            selectCLIPath()
+                        }
+                    }
+
+                    HStack {
+                        Button(action: saveSettings) {
+                            Text("Save & Apply")
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        if showSaveFeedback {
+                            Text("✓ Settings successfully saved and applied")
+                                .foregroundColor(.green)
+                                .font(.footnote)
+                                .transition(.opacity)
+                        }
+                    }
+                    .padding(.top, 6)
+                }
             }
             
             Section("About Kapsel") {
@@ -108,60 +137,61 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .onAppear {
-            loadSettings()
-            autoDetectCLIPath()
+            syncCLIPathFromDetection()
+            fetchCLIVersion()
+        }
+        .onChange(of: engineStatus.installStatus) { _, _ in
+            syncCLIPathFromDetection()
             fetchCLIVersion()
         }
     }
     
-    private func loadSettings() {
-        cliPath = CLIService.shared.cliPath
-        checkEngineStatus()
+    private func languageLabel(for language: AppLanguage) -> some View {
+        switch language {
+        case .system:
+            Text("System Default")
+        case .english:
+            Text("English")
+        case .simplifiedChinese:
+            Text("简体中文")
+        }
     }
     
-    private func checkEngineStatus() {
-        let exists = FileManager.default.fileExists(atPath: cliPath)
-        engineOnline = exists
-    }
-    
-    private func autoDetectCLIPath() {
-        let paths = [
-            "/opt/homebrew/bin/container",
-            "/usr/local/bin/container",
-            "/usr/bin/container"
-        ]
-        
-        if cliPath.isEmpty || !FileManager.default.fileExists(atPath: cliPath) {
-            for path in paths {
-                if FileManager.default.fileExists(atPath: path) {
-                    cliPath = path
-                    saveSettings()
-                    break
-                }
-            }
+    private func syncCLIPathFromDetection() {
+        if let path = engineStatus.installedCLIPath {
+            cliPath = path
+        } else {
+            cliPath = CLIService.shared.cliPath
         }
     }
     
     private func fetchCLIVersion() {
+        guard engineStatus.isCLIInstalled else {
+            cliVersion = languageManager.localized("No engine version detected")
+            return
+        }
+
         Task {
             do {
                 let version = try await SystemService.shared.getCLIVersion()
                 cliVersion = version
             } catch {
-                cliVersion = "No engine version detected"
+                cliVersion = languageManager.localized("No engine version detected")
             }
         }
     }
     
     private func saveSettings() {
         CLIService.shared.cliPath = cliPath
-        checkEngineStatus()
         
         withAnimation {
             showSaveFeedback = true
         }
         
-        fetchCLIVersion()
+        Task {
+            await engineStatus.refresh()
+            fetchCLIVersion()
+        }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             withAnimation {
@@ -175,7 +205,7 @@ struct SettingsView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.title = String(localized: "Locate container CLI tool")
+        panel.title = languageManager.localized("Locate container CLI tool")
         
         if panel.runModal() == .OK {
             cliPath = panel.url?.path ?? ""
@@ -186,4 +216,6 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
+        .environment(AppLanguageManager.shared)
+        .environment(EngineStatusModel.shared)
 }

@@ -3,268 +3,165 @@ import KapselKit
 
 /// Dashboard view displaying VM resource stats and system control status
 struct DashboardView: View {
-    @State private var containerCount: Int = 0
-    @State private var runningContainerCount: Int = 0
-    @State private var imageCount: Int = 0
-    @State private var isVMRunning: Bool = false
-    @State private var isBuilderRunning: Bool = false
-    @State private var isLoading: Bool = false
-    
-    // Quick deploy form configurations
+    @Environment(EngineStatusModel.self) private var engineStatus
+    @Environment(DashboardStore.self) private var store
+
+    @State private var isRefreshing = false
+
     @State private var quickRunImage: String = ""
     @State private var isQuickRunning: Bool = false
     @State private var runSuccessMessage: String? = nil
     @State private var runErrorMessage: String? = nil
-    
-    // Action control status
+
     @State private var controlErrorMessage: String? = nil
     @State private var controlSuccessMessage: String? = nil
-    
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Top header bar
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("System Monitor")
-                            .font(.system(.title2, design: .rounded))
-                            .fontWeight(.bold)
-                        Text("Real-time execution diagnostics based on Apple Silicon Virtualization Framework")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    
-                    Button(action: {
-                        Task { await refreshData() }
-                    }) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.body)
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(isLoading)
-                }
-                .padding(.horizontal)
-                .padding(.top)
-                
-                // Offline alert banner if the guest VM engine is stopped
-                if !isVMRunning {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: "exclamationmark.octagon.fill")
-                                .foregroundColor(.red)
-                            Text("Container Engine Offline")
-                                .font(.headline)
-                        }
-                        Text("The VM guest engine is currently stopped. Please start the engine using the 'System Controls' panel below, or configure the CLI paths in Settings.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.red.opacity(0.08))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.red.opacity(0.2), lineWidth: 1)
-                    )
-                    .padding(.horizontal)
-                }
-                
-                // Key metrics grids
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    MetricCard(
-                        title: "Containers",
-                        value: "\(containerCount)",
-                        icon: "shippingbox",
-                        color: .blue
-                    )
-                    
-                    MetricCard(
-                        title: "Running",
-                        value: "\(runningContainerCount)",
-                        icon: "play.circle",
-                        color: .green
-                    )
-                    
-                    MetricCard(
-                        title: "Images",
-                        value: "\(imageCount)",
-                        icon: "photo.stack",
-                        color: .purple
-                    )
-                }
-                .padding(.horizontal)
-                
-                // Quick deploy container action
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Quick Deploy Container")
-                        .font(.headline)
-                    
-                    HStack(spacing: 12) {
-                        TextField("Enter OCI image name, e.g. nginx:alpine", text: $quickRunImage)
-                            .textFieldStyle(.roundedBorder)
-                            .disabled(isQuickRunning || !isVMRunning)
-                        
-                        Button(action: {
-                            quickRunContainer()
-                        }) {
-                            if isQuickRunning {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Label("Deploy", systemImage: "play.fill")
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.green)
-                        .disabled(quickRunImage.isEmpty || isQuickRunning || !isVMRunning)
-                    }
-                    
-                    if let success = runSuccessMessage {
-                        Text(success)
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                    if let error = runErrorMessage {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.red)
+        Form {
+            if engineStatus.isChecking {
+                Section {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Detecting container engine...")
                     }
                 }
-                .padding()
-                .background(Color(NSColor.windowBackgroundColor))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal)
-                
-                // Sandbox metrics and system controllers
-                HStack(alignment: .top, spacing: 16) {
-                    // Resource Utilizations
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Resource Utilization (Sandbox VM Monitor)")
-                            .font(.headline)
-                        
-                        HStack(spacing: 20) {
-                            ResourceGauge(title: "CPU Usage", percent: isVMRunning ? 0.12 : 0.0, color: .blue)
-                            ResourceGauge(title: "Memory Usage", percent: isVMRunning ? 0.35 : 0.0, color: .orange)
-                            ResourceGauge(title: "Disk Usage", percent: isVMRunning ? 0.58 : 0.0, color: .purple)
+            } else if engineStatus.shouldShowInstallUI {
+                Section {
+                    EngineSetupBanner {
+                        Task {
+                            await engineStatus.refresh()
+                            await refreshData()
                         }
                     }
-                    .padding(16)
-                    .background(Color(NSColor.windowBackgroundColor))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-                    )
-                    
-                    // System Controls Box
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("System Controls")
-                            .font(.headline)
-                        
-                        VStack(spacing: 8) {
-                            HStack {
-                                Label("Engine VM", systemImage: "macpro.gen3")
-                                Spacer()
-                                Button(isVMRunning ? "Stop" : "Start") {
-                                    toggleEngineVM()
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(isVMRunning ? .orange : .green)
-                            }
-                            
-                            HStack {
-                                Label("BuildKit Builder", systemImage: "hammer.fill")
-                                Spacer()
-                                Button(isBuilderRunning ? "Running" : "Start") {
-                                    startBuildKit()
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(isBuilderRunning || !isVMRunning)
-                            }
-                            
-                            HStack {
-                                Label("Unused Images", systemImage: "trash.fill")
-                                Spacer()
-                                Button("Prune") {
-                                    pruneLocalImages()
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(!isVMRunning)
-                            }
-                        }
-                        
-                        if let msg = controlSuccessMessage {
-                            Text(msg)
-                                .font(.caption)
-                                .foregroundColor(.green)
-                        }
-                        if let errMsg = controlErrorMessage {
-                            Text(errMsg)
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(NSColor.windowBackgroundColor))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-                    )
                 }
-                .padding(.horizontal)
-                .padding(.bottom)
+            } else if !store.isVMRunning {
+                Section {
+                    Label {
+                        Text("The VM guest engine is currently stopped. Start the engine from System Controls below.")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+
+            Section("Overview") {
+                HStack(spacing: 0) {
+                    MetricTile(icon: "shippingbox", value: store.containerCount, title: "Containers", tint: .blue)
+                    Divider().frame(height: 48)
+                    MetricTile(icon: "play.circle", value: store.runningContainerCount, title: "Running", tint: .green)
+                    Divider().frame(height: 48)
+                    MetricTile(icon: "photo.stack", value: store.imageCount, title: "Images", tint: .purple)
+                }
+                .padding(.vertical, 8)
+            }
+
+            Section("Resource Utilization") {
+                HStack(spacing: 0) {
+                    ResourceGauge(title: "CPU Usage", value: store.isVMRunning ? 0.12 : 0, tint: .blue)
+                    ResourceGauge(title: "Memory Usage", value: store.isVMRunning ? 0.35 : 0, tint: .orange)
+                    ResourceGauge(title: "Disk Usage", value: store.isVMRunning ? 0.58 : 0, tint: .purple)
+                }
+                .padding(.vertical, 8)
+            }
+
+            Section("Quick Deploy Container") {
+                TextField("Enter OCI image name, e.g. nginx:alpine", text: $quickRunImage)
+                    .disabled(isQuickRunning || !store.isVMRunning || !engineStatus.isCLIInstalled)
+
+                Button {
+                    quickRunContainer()
+                } label: {
+                    if isQuickRunning {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("Deploy", systemImage: "play.fill")
+                    }
+                }
+                .disabled(quickRunImage.isEmpty || isQuickRunning || !store.isVMRunning || !engineStatus.isCLIInstalled)
+
+                if let success = runSuccessMessage {
+                    Text(success)
+                        .foregroundStyle(.green)
+                }
+                if let error = runErrorMessage {
+                    Text(error)
+                        .foregroundStyle(.red)
+                }
+            }
+
+            Section("System Controls") {
+                LabeledContent {
+                    Button(store.isVMRunning ? "Stop" : "Start") {
+                        toggleEngineVM()
+                    }
+                    .disabled(!engineStatus.isCLIInstalled)
+                } label: {
+                    Label("Engine VM", systemImage: "macpro.gen3")
+                }
+
+                LabeledContent {
+                    Button(store.isBuilderRunning ? "Running" : "Start") {
+                        startBuildKit()
+                    }
+                    .disabled(store.isBuilderRunning || !store.isVMRunning || !engineStatus.isCLIInstalled)
+                } label: {
+                    Label("BuildKit Builder", systemImage: "hammer.fill")
+                }
+
+                LabeledContent {
+                    Button("Prune") {
+                        pruneLocalImages()
+                    }
+                    .disabled(!store.isVMRunning || !engineStatus.isCLIInstalled)
+                } label: {
+                    Label("Unused Images", systemImage: "trash.fill")
+                }
+
+                if let msg = controlSuccessMessage {
+                    Text(msg)
+                        .foregroundStyle(.green)
+                }
+                if let errMsg = controlErrorMessage {
+                    Text(errMsg)
+                        .foregroundStyle(.red)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle("System Monitor")
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    Task { await refreshData() }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                .disabled(isRefreshing)
             }
         }
         .onAppear {
-            Task {
-                await refreshData()
-            }
+            Task { await refreshData() }
+        }
+        .onChange(of: engineStatus.installStatus) { _, _ in
+            Task { await refreshData() }
         }
     }
-    
+
     private func refreshData() async {
-        isLoading = true
-        do {
-            let status = try await SystemService.shared.getSystemStatus()
-            isVMRunning = status.isRunning
-            isBuilderRunning = status.builderRunning
-            
-            if isVMRunning {
-                let containers = try await ContainerService.shared.fetchContainers(showAll: true)
-                containerCount = containers.count
-                runningContainerCount = containers.filter { $0.status == .running }.count
-                
-                let images = try await ImageService.shared.fetchImages()
-                imageCount = images.count
-            } else {
-                containerCount = 0
-                runningContainerCount = 0
-                imageCount = 0
-            }
-        } catch {
-            isVMRunning = false
-            containerCount = 0
-            runningContainerCount = 0
-            imageCount = 0
-            print("Failed to fetch dashboard metrics: \(error)")
-        }
-        isLoading = false
+        isRefreshing = true
+        await store.refresh(isCLIInstalled: engineStatus.isCLIInstalled)
+        isRefreshing = false
     }
-    
+
     private func quickRunContainer() {
         guard !quickRunImage.isEmpty else { return }
         isQuickRunning = true
         runErrorMessage = nil
         runSuccessMessage = nil
-        
+
         Task {
             do {
                 try await ContainerService.shared.runContainer(image: quickRunImage, name: nil)
@@ -277,13 +174,13 @@ struct DashboardView: View {
             isQuickRunning = false
         }
     }
-    
+
     private func toggleEngineVM() {
         Task {
             controlErrorMessage = nil
             controlSuccessMessage = nil
             do {
-                if isVMRunning {
+                if store.isVMRunning {
                     try await SystemService.shared.stopSystem()
                     controlSuccessMessage = String(localized: "Engine VM successfully stopped.")
                 } else {
@@ -296,7 +193,7 @@ struct DashboardView: View {
             }
         }
     }
-    
+
     private func startBuildKit() {
         Task {
             controlErrorMessage = nil
@@ -310,7 +207,7 @@ struct DashboardView: View {
             }
         }
     }
-    
+
     private func pruneLocalImages() {
         Task {
             controlErrorMessage = nil
@@ -326,77 +223,56 @@ struct DashboardView: View {
     }
 }
 
-/// Metric Card view
-struct MetricCard: View {
-    let title: String
-    let value: String
+/// A single Overview metric (icon, large animated number, caption).
+private struct MetricTile: View {
     let icon: String
-    let color: Color
-    
+    let value: Int
+    let title: LocalizedStringKey
+    var tint: Color = .accentColor
+
     var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(color.opacity(0.1))
-                    .frame(width: 48, height: 48)
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(color)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(LocalizedStringKey(title))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Text(value)
-                    .font(.system(.title, design: .rounded))
-                    .fontWeight(.bold)
-            }
-            Spacer()
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(tint)
+            Text("\(value)")
+                .font(.system(.title, design: .rounded).weight(.semibold))
+                .contentTransition(.numericText())
+                .animation(.snappy, value: value)
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .padding()
-        .background(Color(NSColor.windowBackgroundColor))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity)
     }
 }
 
-/// Resource Gauge view
-struct ResourceGauge: View {
-    let title: String
-    let percent: Double
-    let color: Color
-    
+/// A native circular gauge for a resource utilization percentage.
+private struct ResourceGauge: View {
+    let title: LocalizedStringKey
+    let value: Double
+    var tint: Color = .accentColor
+
     var body: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .stroke(color.opacity(0.1), lineWidth: 6)
-                    .frame(width: 70, height: 70)
-                Circle()
-                    .trim(from: 0.0, to: CGFloat(percent))
-                    .stroke(
-                        AngularGradient(colors: [color, color.opacity(0.7), color], center: .center),
-                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
-                    )
-                    .frame(width: 70, height: 70)
-                    .rotationEffect(.degrees(-90))
-                
-                Text("\(Int(percent * 100))%")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+        VStack(spacing: 8) {
+            Gauge(value: value) {
+                EmptyView()
+            } currentValueLabel: {
+                Text("\(Int((value * 100).rounded()))%")
+                    .font(.caption2)
             }
-            
-            Text(LocalizedStringKey(title))
+            .gaugeStyle(.accessoryCircular)
+            .tint(tint)
+            Text(title)
                 .font(.caption)
-                .fontWeight(.medium)
+                .foregroundStyle(.secondary)
         }
-        .frame(width: 90)
+        .frame(maxWidth: .infinity)
     }
 }
 
 #Preview {
     DashboardView()
+        .environment(EngineStatusModel.shared)
+        .environment(DashboardStore())
 }

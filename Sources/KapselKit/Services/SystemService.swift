@@ -25,9 +25,52 @@ public final class SystemService: Sendable {
     /// Inspects the overall execution status of the system VM
     /// - Returns: Current system status configuration model
     public func getSystemStatus() async throws -> SystemStatus {
-        return try await cli.runAndDecodeJSON(arguments: ["system", "status"], type: SystemStatus.self)
+        let (rawOutput, _) = try await cli.runAllowingFailure(
+            arguments: ["system", "status", "--format", "json"]
+        )
+        let response = try SystemStatusResponse.decode(from: rawOutput)
+
+        async let builderRunning = fetchBuilderRunning()
+        async let dnsDomain = fetchDefaultDNSDomain()
+
+        return SystemStatus(
+            response: response,
+            builderRunning: await builderRunning,
+            dnsDomain: await dnsDomain
+        )
     }
-    
+
+    private func fetchBuilderRunning() async -> Bool {
+        do {
+            let output = try await cli.run(arguments: ["builder", "status", "--format", "json"])
+            guard let data = output.data(using: .utf8) else { return false }
+            let entries = try JSONDecoder().decode([BuilderStatusEntry].self, from: data)
+            return entries.contains(where: \.isRunning)
+        } catch {
+            return false
+        }
+    }
+
+    private func fetchDefaultDNSDomain() async -> String? {
+        do {
+            let output = try await cli.run(arguments: ["system", "dns", "list", "--format", "json"])
+            guard let data = output.data(using: .utf8) else { return nil }
+
+            if let entries = try? JSONDecoder().decode([SystemDNSEntry].self, from: data),
+               let domain = entries.compactMap(\.resolvedDomain).first {
+                return domain
+            }
+
+            if let entry = try? JSONDecoder().decode(SystemDNSEntry.self, from: data) {
+                return entry.resolvedDomain
+            }
+        } catch {
+            return nil
+        }
+
+        return nil
+    }
+
     /// Fetches diagnostic system kernel logs
     /// - Returns: Logs string content
     public func getSystemLogs() async throws -> String {

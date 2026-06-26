@@ -7,18 +7,19 @@ final class KapselKitTests: XCTestCase {
     /// 测试 Container 实体模型的初始化及属性字段映射
     func testContainerInitialization() {
         let container = Container(
+            containerID: "abc123",
             name: "test-nginx",
             image: "nginx:alpine",
             status: .running,
-            ipAddress: "192.168.64.10",
+            address: "192.168.64.10",
             createdAt: nil
         )
-        
+
         XCTAssertEqual(container.name, "test-nginx")
         XCTAssertEqual(container.image, "nginx:alpine")
         XCTAssertEqual(container.status, .running)
-        XCTAssertEqual(container.ipAddress, "192.168.64.10")
-        XCTAssertEqual(container.status.displayName, "运行中")
+        XCTAssertEqual(container.address, "192.168.64.10")
+        XCTAssertEqual(container.status.displayName, "Running")
     }
     
     /// 测试 ContainerImage 实体模型的格式化方法
@@ -27,11 +28,51 @@ final class KapselKitTests: XCTestCase {
             repository: "library/redis",
             tag: "7.2",
             digest: "sha256:12345",
-            sizeBytes: 104857600 // 100 MB
+            size: "100 MB"
         )
-        
+
         XCTAssertEqual(image.fullName, "library/redis:7.2")
-        // 验证字节转换格式，这里只检测是否包含 "MB" 标志
-        XCTAssertTrue(image.formattedSize.contains("MB"))
+        XCTAssertEqual(image.size, "100 MB")
+    }
+
+    /// 测试 SystemStatus JSON 解析与运行状态映射
+    func testSystemStatusJSONDecoding() throws {
+        let rawJSON = """
+        {
+          "apiServerAppName": "container-apiserver",
+          "apiServerBuild": "release",
+          "apiServerCommit": "ee848e3ebfd7c73b04dd419683be54fb450b8779",
+          "apiServerVersion": "container-apiserver version 1.0.0 (build: release, commit: ee848e3)",
+          "appRoot": "/Users/amigoer/Library/Application Support/com.apple.container/",
+          "installRoot": "/usr/local/",
+          "status": "running"
+        }
+        """
+
+        let response = try SystemStatusResponse.decode(from: rawJSON)
+        let status = SystemStatus(response: response)
+
+        XCTAssertEqual(response.status, "running")
+        XCTAssertTrue(status.isRunning)
+        XCTAssertEqual(response.apiServerAppName, "container-apiserver")
+    }
+
+    /// 测试 engine 停止时的 JSON 解析
+    func testSystemStatusNotRunningJSONDecoding() throws {
+        let rawJSON = """
+        {
+          "status": "not running",
+          "appRoot": "",
+          "installRoot": "",
+          "logRoot": null,
+          "apiServerVersion": "",
+          "apiServerCommit": "",
+          "apiServerBuild": "",
+          "apiServerAppName": ""
+        }
+        """
+
+        let response = try SystemStatusResponse.decode(from: rawJSON)
+        XCTAssertFalse(response.isRunning)
     }
 }

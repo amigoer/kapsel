@@ -26,7 +26,10 @@ let package = Package(
         .executableTarget(
             name: "KapselApp",
             dependencies: ["KapselKit"],
-            path: "Sources/KapselApp"
+            path: "Sources/KapselApp",
+            resources: [
+                .process("Resources")
+            ]
         ),
         // Unit tests target
         .testTarget(

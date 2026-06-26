@@ -1,12 +1,12 @@
 import SwiftUI
 import KapselKit
 
-/// Container details sheet showing general metadata, networking, volumes, environment variables, exec, and logs
+/// Container details view with tabs for metadata, networking, volumes, exec, and logs
 struct ContainerDetailView: View {
     let containerName: String
-    var onDismiss: () -> Void
-    
-    @State private var detail: ContainerDetail? = nil
+    var onDismiss: (() -> Void)? = nil
+
+    @State private var detail: ContainerDetail?
     @State private var isLoading: Bool = false
     @State private var errorMessage: String? = nil
     
@@ -20,55 +20,43 @@ struct ContainerDetailView: View {
     @State private var isExecutingExec: Bool = false
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Header bar
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Container Details")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text(containerName)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                
-                Button("Close") {
-                    onDismiss()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding()
-            .background(Color(NSColor.windowBackgroundColor))
-            
-            Divider()
-            
+        Group {
             if isLoading {
-                VStack {
-                    Spacer()
-                    ProgressView("Loading container configuration...")
-                    Spacer()
-                }
+                ProgressView("Loading container configuration...")
             } else if let error = errorMessage {
-                VStack(spacing: 16) {
-                    Spacer()
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(.red)
-                    Text("Failed to Load Configuration")
-                        .font(.headline)
+                ContentUnavailableView {
+                    Label("Failed to Load Configuration", systemImage: "exclamationmark.triangle")
+                } description: {
                     Text(error)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
+                } actions: {
                     Button("Retry") {
                         Task { await loadDetail() }
                     }
-                    .buttonStyle(.bordered)
-                    Spacer()
                 }
-                .padding()
-            } else if let d = detail {
-                TabView {
+            } else if detail != nil {
+                detailTabs
+            }
+        }
+        .navigationTitle(containerName)
+        .toolbar {
+            if let onDismiss {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: onDismiss)
+                }
+            }
+        }
+        .onAppear {
+            Task {
+                await loadDetail()
+                fetchLogs()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var detailTabs: some View {
+        if let d = detail {
+            TabView {
                     // Tab 1: General configurations
                     Form {
                         Section("Metadata") {
@@ -105,40 +93,29 @@ struct ContainerDetailView: View {
                     }
                     
                     // Tab 2: Networking
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Virtual Network & Port Mappings")
-                            .font(.headline)
-                        
-                        LabeledContent("IP Address", value: d.address ?? "Not Assigned / Offline")
-                            .padding(.bottom, 8)
-                        
+                    Group {
                         if let ports = d.ports, !ports.isEmpty {
-                            Table(ports) {
-                                TableColumn("Host Port") { port in
-                                    Text("\(port.hostPort)")
-                                }
-                                TableColumn("Container Port") { port in
-                                    Text("\(port.containerPort)")
-                                }
-                                TableColumn("Protocol") { port in
-                                    Text(port.protocolType?.uppercased() ?? "TCP")
+                            Form {
+                                LabeledContent("IP Address", value: d.address ?? "Not Assigned / Offline")
+                                Section("Port Mappings") {
+                                    ForEach(Array(ports.enumerated()), id: \.offset) { _, port in
+                                        LabeledContent("\(port.hostPort) → \(port.containerPort)") {
+                                            Text(port.protocolType?.uppercased() ?? "TCP")
+                                        }
+                                    }
                                 }
                             }
-                            .border(Color.secondary.opacity(0.15))
+                            .formStyle(.grouped)
                         } else {
                             ContentUnavailableView("No Port Mappings", systemImage: "network", description: Text("No ports are mapped to the host machine."))
                         }
                     }
-                    .padding()
                     .tabItem {
                         Label("Networking", systemImage: "network")
                     }
                     
                     // Tab 3: Volumes
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Storage Volume Mounts")
-                            .font(.headline)
-                        
+                    Group {
                         if let volumes = d.volumes, !volumes.isEmpty {
                             Table(volumes) {
                                 TableColumn("Host Path") { vol in
@@ -148,109 +125,78 @@ struct ContainerDetailView: View {
                                     Text(vol.containerPath)
                                 }
                                 TableColumn("Access Mode") { vol in
-                                    if vol.readOnly {
-                                        Text("Read-Only (ro)")
-                                            .foregroundColor(.orange)
-                                    } else {
-                                        Text("Read-Write (rw)")
-                                            .foregroundColor(.green)
-                                    }
+                                    Text(vol.readOnly ? "Read-Only (ro)" : "Read-Write (rw)")
                                 }
                             }
-                            .border(Color.secondary.opacity(0.15))
                         } else {
                             ContentUnavailableView("No Storage Volumes", systemImage: "folder.badge.minus", description: Text("No external directories are mounted to this container."))
                         }
                     }
-                    .padding()
                     .tabItem {
                         Label("Volumes", systemImage: "folder.fill")
                     }
                     
                     // Tab 4: Environment Variables
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Environment Variables")
-                            .font(.headline)
-                        
+                    Group {
                         if let envs = d.env, !envs.isEmpty {
-                            List(envs, id: \.self) { env in
-                                let parts = env.components(separatedBy: "=")
-                                HStack {
-                                    Text(parts.first ?? "")
-                                        .fontWeight(.bold)
-                                        .frame(width: 180, alignment: .leading)
-                                    Divider()
-                                    Text(parts.count > 1 ? parts.dropFirst().joined(separator: "=") : "")
-                                        .foregroundColor(.secondary)
+                            Form {
+                                Section {
+                                    ForEach(envs, id: \.self) { env in
+                                        let parts = env.components(separatedBy: "=")
+                                        LabeledContent(parts.first ?? "") {
+                                            Text(parts.count > 1 ? parts.dropFirst().joined(separator: "=") : "")
+                                        }
+                                    }
                                 }
                             }
-                            .border(Color.secondary.opacity(0.15))
+                            .formStyle(.grouped)
                         } else {
                             ContentUnavailableView("No Environment Variables", systemImage: "list.bullet.rectangle", description: Text("No custom environment variables configured."))
                         }
                     }
-                    .padding()
                     .tabItem {
                         Label("Environment", systemImage: "slider.horizontal.3")
                     }
                     
                     // Tab 5: Command execution (Exec)
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Execute One-Off Command (Exec)")
-                            .font(.headline)
-                        
-                        HStack {
-                            TextField("Enter command, e.g. uname -a", text: $execCommandText)
-                                .textFieldStyle(.roundedBorder)
-                                .disabled(isExecutingExec)
-                            
-                            Button(action: executeExecCommand) {
-                                if isExecutingExec {
-                                    ProgressView().controlSize(.small)
-                                } else {
-                                    Text("Execute")
-                                }
+                    Form {
+                        TextField("Enter command, e.g. uname -a", text: $execCommandText)
+                            .disabled(isExecutingExec)
+
+                        Button(action: executeExecCommand) {
+                            if isExecutingExec {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Label("Execute", systemImage: "play.fill")
                             }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(execCommandText.isEmpty || isExecutingExec)
                         }
-                        
-                        TerminalView(content: execResult)
+                        .disabled(execCommandText.isEmpty || isExecutingExec)
+
+                        Section {
+                            TerminalView(content: execResult)
+                                .frame(minHeight: 200)
+                        }
                     }
-                    .padding()
+                    .formStyle(.grouped)
                     .tabItem {
                         Label("Exec", systemImage: "terminal.fill")
                     }
                     
                     // Tab 6: Console Logs
                     VStack(spacing: 0) {
-                        HStack {
-                            Text("Console Logs (Logs)")
-                                .font(.headline)
-                            Spacer()
+                        TerminalView(content: logs)
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .automatic) {
                             Button(action: fetchLogs) {
-                                Image(systemName: "arrow.clockwise")
+                                Label("Refresh", systemImage: "arrow.clockwise")
                             }
-                            .buttonStyle(.plain)
                             .disabled(isFetchingLogs)
                         }
-                        .padding(.horizontal)
-                        .padding(.top)
-                        
-                        TerminalView(content: logs)
-                            .padding()
                     }
                     .tabItem {
                         Label("Logs", systemImage: "doc.text.fill")
                     }
-                }
-            }
-        }
-        .frame(width: 650, height: 500)
-        .onAppear {
-            Task {
-                await loadDetail()
-                fetchLogs()
             }
         }
     }

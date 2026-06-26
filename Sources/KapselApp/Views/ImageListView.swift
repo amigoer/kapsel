@@ -1,227 +1,108 @@
 import SwiftUI
+import AppKit
 import KapselKit
 
 /// Image management view supporting pulling, building, deleting, tagging, pushing, and pruning OCI images
 struct ImageListView: View {
-    @State private var images: [ContainerImage] = []
-    @State private var isLoading: Bool = false
-    @State private var errorMessage: String? = nil
-    @State private var successMessage: String? = nil
-    
-    // Selected image ID supporting selection and right-click context menu
-    @State private var selectedImageId: String? = nil
-    
-    // Pull image form state
-    @State private var imageNamePull: String = ""
-    @State private var isPulling: Bool = false
-    
-    // Build image sheet state
-    @State private var isShowingBuildSheet: Bool = false
-    @State private var buildTagName: String = ""
-    @State private var buildContextPath: String = ""
-    @State private var buildArch: String = ""
-    @State private var buildDockerfilePath: String = ""
+    @Environment(ImagesStore.self) private var store
+    @State private var isRefreshing = false
+    @State private var successMessage: String?
+
+    @State private var selectedImageId: String?
+    @State private var imageNamePull = ""
+    @State private var isPulling = false
+
+    @State private var isShowingBuildSheet = false
+    @State private var buildTagName = ""
+    @State private var buildContextPath = ""
+    @State private var buildArch = ""
+    @State private var buildDockerfilePath = ""
     @State private var buildArgs: [BuildArg] = []
-    @State private var isBuilding: Bool = false
-    
-    // Tag image state
-    @State private var imageToTag: ContainerImage? = nil
-    @State private var newTagName: String = ""
-    @State private var showTagAlert: Bool = false
-    
-    // Delete image confirmation
-    @State private var imageToDelete: ContainerImage? = nil
-    @State private var showDeleteConfirmation: Bool = false
-    
-    // Prune images confirmation
-    @State private var showPruneConfirmation: Bool = false
-    
-    /// Structure for custom build arguments
+    @State private var isBuilding = false
+
+    @State private var imageToTag: ContainerImage?
+    @State private var newTagName = ""
+    @State private var showTagAlert = false
+    @State private var imageToDelete: ContainerImage?
+    @State private var showDeleteConfirmation = false
+    @State private var showPruneConfirmation = false
+
     struct BuildArg: Identifiable {
         let id = UUID()
-        var key: String = ""
-        var value: String = ""
+        var key = ""
+        var value = ""
     }
-    
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Action toolbar
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Images")
-                        .font(.system(.title2, design: .rounded))
-                        .fontWeight(.bold)
+        Group {
+            if !store.hasLoaded {
+                ProgressView("Loading image list...")
+            } else if store.images.isEmpty {
+                ContentUnavailableView {
+                    Label("No Local Images", systemImage: "photo.on.rectangle.angled")
+                } description: {
+                    Text("Enter an image name above to Pull, or click 'Build Image' to compile locally.")
+                } actions: {
+                    Button("Build Image") { isShowingBuildSheet = true }
                 }
-                
-                Spacer()
-                
-                // Pull forms
-                HStack(spacing: 8) {
-                    TextField("Enter image name to pull, e.g. nginx:latest", text: $imageNamePull)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 250)
-                        .disabled(isPulling)
-                    
-                    Button(action: { Task { await pullImage() } }) {
-                        if isPulling {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Text("Pull Image")
-                        }
+            } else {
+                imagesTable
+            }
+        }
+        .navigationTitle("Images")
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                TextField("Enter image name to pull, e.g. nginx:latest", text: $imageNamePull)
+                    .frame(minWidth: 220, maxWidth: 320)
+                    .disabled(isPulling)
+            }
+
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    Task { await pullImage() }
+                } label: {
+                    if isPulling {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Label("Pull Image", systemImage: "arrow.down.circle")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(imageNamePull.isEmpty || isPulling)
                 }
-                
-                Button(action: { isShowingBuildSheet = true }) {
-                    Label("Build Image", systemImage: "hammer.fill")
+                .disabled(imageNamePull.isEmpty || isPulling)
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    isShowingBuildSheet = true
+                } label: {
+                    Label("Build Image", systemImage: "hammer")
                 }
-                .buttonStyle(.bordered)
                 .disabled(isBuilding)
-                
-                // Prune unused local images
-                Button(action: { showPruneConfirmation = true }) {
+            }
+
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showPruneConfirmation = true
+                } label: {
                     Label("Prune Unused", systemImage: "paintbrush")
                 }
-                .buttonStyle(.bordered)
-                
-                Button(action: { Task { await loadImages() } }) {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .buttonStyle(.bordered)
-                .disabled(isLoading)
             }
-            .padding()
-            .background(Color(NSColor.windowBackgroundColor))
-            
-            Divider()
-            
-            // Image listing table
-            if isLoading && images.isEmpty {
-                Spacer()
-                ProgressView("Loading image list...")
-                Spacer()
-            } else if images.isEmpty {
-                ContentUnavailableView(
-                    "No Local Images",
-                    systemImage: "photo.on.rectangle.angled",
-                    description: Text("Enter an image name above to Pull, or click 'Build Image' to compile locally.")
-                )
-            } else {
-                Table(images, selection: $selectedImageId) {
-                    TableColumn("Repository") { image in
-                        HStack(spacing: 8) {
-                            Image(systemName: "photo.stack.fill")
-                                .foregroundColor(.purple)
-                            Text(image.repository)
-                                .fontWeight(.medium)
-                        }
-                    }
-                    .width(min: 150, ideal: 200, max: 250)
-                    
-                    TableColumn("Tag") { image in
-                        Text(image.tag)
-                            .foregroundColor(.secondary)
-                    }
-                    .width(min: 80, ideal: 100, max: 120)
-                    
-                    TableColumn("Platform") { image in
-                        HStack(spacing: 2) {
-                            if let os = image.os {
-                                Text(os)
-                            }
-                            if let arch = image.arch {
-                                Text("/\(arch)")
-                            }
-                            if image.os == nil && image.arch == nil {
-                                Text("--")
-                            }
-                        }
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    }
-                    .width(min: 80, ideal: 100, max: 120)
-                    
-                    TableColumn("Size") { image in
-                        Text(image.size ?? "--")
-                            .foregroundColor(.secondary)
-                    }
-                    .width(min: 60, ideal: 80, max: 100)
-                    
-                    TableColumn("Digest") { image in
-                        Text(image.digest)
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    .width(min: 150, ideal: 200, max: 300)
-                    
-                    TableColumn("Actions") { image in
-                        HStack(spacing: 8) {
-                            Button(action: {
-                                imageToTag = image
-                                newTagName = ""
-                                showTagAlert = true
-                            }) {
-                                Image(systemName: "tag")
-                                    .foregroundColor(.blue)
-                                    .help("Tag Image")
-                            }
-                            .buttonStyle(.plain)
-                            
-                            Button(action: { Task { await pushImage(image) } }) {
-                                Image(systemName: "arrow.up.circle")
-                                    .foregroundColor(.green)
-                                    .help("Push to Registry")
-                            }
-                            .buttonStyle(.plain)
-                            
-                            Button(action: {
-                                imageToDelete = image
-                                showDeleteConfirmation = true
-                            }) {
-                                Image(systemName: "trash")
-                                    .foregroundColor(.red)
-                                    .help("Delete Image")
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .width(min: 100, ideal: 120, max: 140)
+
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    Task { await loadImages() }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
                 }
-                .contextMenu {
-                    if let selectedId = selectedImageId, let image = images.first(where: { $0.id == selectedId }) {
-                        Button("Tag Image...") {
-                            imageToTag = image
-                            newTagName = ""
-                            showTagAlert = true
-                        }
-                        
-                        Button("Push Image") {
-                            Task { await pushImage(image) }
-                        }
-                        
-                        Divider()
-                        
-                        Button("Delete Image") {
-                            imageToDelete = image
-                            showDeleteConfirmation = true
-                        }
-                    } else {
-                        Text("No image selected")
-                            .foregroundColor(.secondary)
-                    }
-                }
+                .disabled(isRefreshing)
             }
         }
         .alert("Error", isPresented: Binding(
-            get: { errorMessage != nil },
-            set: { if !$0 { errorMessage = nil } }
+            get: { store.errorMessage != nil },
+            set: { if !$0 { store.errorMessage = nil } }
         )) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text(errorMessage ?? "")
+            Text(store.errorMessage ?? "")
         }
         .alert("Success", isPresented: Binding(
             get: { successMessage != nil },
@@ -261,150 +142,164 @@ struct ImageListView: View {
             Text(String(localized: "Enter a new tag name for \(imageToTag?.fullName ?? "")"))
         }
         .sheet(isPresented: $isShowingBuildSheet) {
-            NavigationStack {
-                Form {
-                    Section("Build Configurations") {
-                        TextField("Image Tag", text: $buildTagName, prompt: Text("e.g. my-custom-app:1.0"))
-                        
-                        HStack {
-                            TextField("Dockerfile Context Path", text: $buildContextPath)
-                            Button("Browse...") {
-                                selectBuildContextFolder()
-                            }
-                        }
-                    }
-                    
-                    Section("Advanced Options") {
-                        TextField("Target Architecture", text: $buildArch, prompt: Text("e.g. arm64 (empty for default)"))
-                        
-                        HStack {
-                            TextField("Dockerfile Path", text: $buildDockerfilePath, prompt: Text("empty for default Dockerfile"))
-                            Button("Browse...") {
-                                selectDockerfile()
-                            }
-                        }
-                    }
-                    
-                    Section("Build Arguments (Build Args)") {
-                        ForEach($buildArgs) { $arg in
-                            HStack(spacing: 8) {
-                                TextField("Name", text: $arg.key)
-                                    .textFieldStyle(.roundedBorder)
-                                Text("=")
-                                    .foregroundColor(.secondary)
-                                TextField("Value", text: $arg.value)
-                                    .textFieldStyle(.roundedBorder)
-                                Button(action: {
-                                    buildArgs.removeAll { $0.id == arg.id }
-                                }) {
-                                    Image(systemName: "minus.circle.fill")
-                                        .foregroundColor(.red)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        
-                        Button(action: { buildArgs.append(BuildArg()) }) {
-                            Label("Add Build Argument", systemImage: "plus.circle")
-                        }
-                    }
-                }
-                .formStyle(.grouped)
-                .navigationTitle("Build Local OCI Image")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { isShowingBuildSheet = false }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Build") {
-                            Task { await buildImage() }
-                        }
-                        .disabled(buildTagName.isEmpty || buildContextPath.isEmpty || isBuilding)
-                    }
-                }
-                .frame(width: 550, height: 450)
-            }
+            buildSheet
         }
         .onAppear {
             Task { await loadImages() }
         }
     }
-    
-    private func loadImages() async {
-        isLoading = true
-        errorMessage = nil
-        do {
-            images = try await ImageService.shared.fetchImages()
-        } catch {
-            errorMessage = error.localizedDescription
+
+    private var imagesTable: some View {
+        Table(store.images, selection: $selectedImageId) {
+            TableColumn("Repository") { image in
+                Label(image.repository, systemImage: "photo.stack")
+            }
+            TableColumn("Tag") { image in
+                Text(image.tag)
+            }
+            TableColumn("Platform") { image in
+                Text([image.os, image.arch].compactMap { $0 }.joined(separator: "/"))
+            }
+            TableColumn("Size") { image in
+                Text(image.size ?? "--")
+            }
+            TableColumn("Digest") { image in
+                Text(image.digest)
+                    .font(.system(.body, design: .monospaced))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            TableColumn("Actions") { image in
+                HStack {
+                    Button { imageToTag = image; newTagName = ""; showTagAlert = true } label: {
+                        Image(systemName: "tag")
+                    }
+                    Button { Task { await pushImage(image) } } label: {
+                        Image(systemName: "arrow.up.circle")
+                    }
+                    Button { imageToDelete = image; showDeleteConfirmation = true } label: {
+                        Image(systemName: "trash")
+                    }
+                }
+                .buttonStyle(.borderless)
+            }
         }
-        isLoading = false
     }
-    
+
+    private var buildSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Build Configurations") {
+                    TextField("Image Tag", text: $buildTagName, prompt: Text("e.g. my-custom-app:1.0"))
+                    HStack {
+                        TextField("Dockerfile Context Path", text: $buildContextPath)
+                        Button("Browse...") { selectBuildContextFolder() }
+                    }
+                }
+                Section("Advanced Options") {
+                    TextField("Target Architecture", text: $buildArch, prompt: Text("e.g. arm64 (empty for default)"))
+                    HStack {
+                        TextField("Dockerfile Path", text: $buildDockerfilePath, prompt: Text("empty for default Dockerfile"))
+                        Button("Browse...") { selectDockerfile() }
+                    }
+                }
+                Section("Build Arguments (Build Args)") {
+                    ForEach($buildArgs) { $arg in
+                        HStack {
+                            TextField("Name", text: $arg.key)
+                            TextField("Value", text: $arg.value)
+                            Button { buildArgs.removeAll { $0.id == arg.id } } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                        }
+                    }
+                    Button("Add Build Argument") { buildArgs.append(BuildArg()) }
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle("Build Local OCI Image")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { isShowingBuildSheet = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Build") { Task { await buildImage() } }
+                        .disabled(buildTagName.isEmpty || buildContextPath.isEmpty || isBuilding)
+                }
+            }
+            .frame(width: 550, height: 450)
+        }
+    }
+
+    private func loadImages() async {
+        isRefreshing = true
+        await store.load()
+        isRefreshing = false
+    }
+
     private func pullImage() async {
         isPulling = true
-        errorMessage = nil
+        store.errorMessage = nil
         do {
             try await ImageService.shared.pullImage(name: imageNamePull)
             imageNamePull = ""
             await loadImages()
         } catch {
-            errorMessage = error.localizedDescription
+            store.errorMessage = error.localizedDescription
         }
         isPulling = false
     }
-    
+
     private func deleteImage(_ image: ContainerImage) async {
         do {
             try await ImageService.shared.deleteImage(digest: image.digest)
             imageToDelete = nil
             await loadImages()
         } catch {
-            errorMessage = error.localizedDescription
+            store.errorMessage = error.localizedDescription
         }
     }
-    
+
     private func tagImage(_ image: ContainerImage, newTag: String) async {
         do {
             try await ImageService.shared.tagImage(source: image.fullName, target: newTag)
             successMessage = String(localized: "Tag \(newTag) successfully created.")
             await loadImages()
         } catch {
-            errorMessage = error.localizedDescription
+            store.errorMessage = error.localizedDescription
         }
     }
-    
+
     private func pushImage(_ image: ContainerImage) async {
         do {
             try await ImageService.shared.pushImage(name: image.fullName)
             successMessage = String(localized: "Image \(image.fullName) successfully pushed.")
         } catch {
-            errorMessage = error.localizedDescription
+            store.errorMessage = error.localizedDescription
         }
     }
-    
+
     private func pruneImages() async {
         do {
             try await ImageService.shared.pruneImages()
             successMessage = String(localized: "Unused images successfully pruned.")
             await loadImages()
         } catch {
-            errorMessage = error.localizedDescription
+            store.errorMessage = error.localizedDescription
         }
     }
-    
+
     private func selectBuildContextFolder() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.title = String(localized: "Select directory containing Dockerfile")
-        
         if panel.runModal() == .OK {
             buildContextPath = panel.url?.path ?? ""
         }
     }
-    
+
     private func selectDockerfile() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
@@ -412,22 +307,18 @@ struct ImageListView: View {
         panel.allowsMultipleSelection = false
         panel.title = String(localized: "Select Dockerfile")
         panel.allowedContentTypes = [.data]
-        
         if panel.runModal() == .OK {
             buildDockerfilePath = panel.url?.path ?? ""
         }
     }
-    
+
     private func buildImage() async {
         isShowingBuildSheet = false
-        isLoading = true
         isBuilding = true
-        
         let args: [String]? = buildArgs.isEmpty ? nil : buildArgs.compactMap { arg in
             guard !arg.key.isEmpty else { return nil }
             return "\(arg.key)=\(arg.value)"
         }
-        
         do {
             try await ImageService.shared.buildImage(
                 tag: buildTagName,
@@ -444,9 +335,13 @@ struct ImageListView: View {
             buildArgs = []
             await loadImages()
         } catch {
-            errorMessage = error.localizedDescription
+            store.errorMessage = error.localizedDescription
         }
         isBuilding = false
-        isLoading = false
     }
+}
+
+#Preview {
+    ImageListView()
+        .environment(ImagesStore())
 }

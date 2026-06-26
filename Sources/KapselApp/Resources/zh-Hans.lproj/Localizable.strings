@@ -216,6 +216,10 @@
 "Engine is offline. System logs are empty." = "引擎未运行，系统日志空。";
 
 /* SettingsView */
+"General" = "通用";
+"App Language" = "应用语言";
+"System Default" = "跟随系统";
+"Language changes take effect immediately." = "语言更改会立即生效。";
 "Engine Executable Configuration" = "命令行引擎路径配置";
 "container CLI absolute path" = "container CLI 绝对执行路径";
 "Engine Status:" = "当前引擎状态:";
@@ -232,6 +236,34 @@
 "No engine version detected" = "未检测到可用引擎版本";
 "Online" = "运行正常";
 "Offline" = "已关闭/未检测到";
+"Installation failed: %@" = "安装失败：%@";
+"Installation finished, but the container CLI was not detected yet." = "安装已完成，但尚未检测到 container CLI。";
+"Engine installed successfully." = "引擎安装成功。";
+"Installer opened. Complete the setup, then click Recheck Installation." = "安装包已打开。请按提示完成安装，然后点击“重新检测”。";
+"Recheck Installation" = "重新检测";
+"Container Engine Not Installed" = "容器引擎未安装";
+"The apple/container CLI was not found on this Mac. Install it with one click, or download the official installer package." = "未在本机找到 apple/container 命令行工具。可一键安装，或下载官方安装包。";
+"Install Engine" = "一键安装";
+"Install via Homebrew" = "通过 Homebrew 安装";
+"Download Installer" = "下载安装包";
+"View Releases" = "查看发布页";
+"Engine Setup" = "引擎安装";
+"Advanced: Configure CLI Path Manually" = "高级：手动配置 CLI 路径";
+"Engine Not Installed" = "引擎未安装";
+"Detecting Engine..." = "正在检测引擎...";
+"Detecting container engine..." = "正在检测 container 引擎...";
+"Homebrew cask unavailable. Downloading official installer instead..." = "Homebrew 无 container 安装包，改为下载官方安装包...";
+"Downloading official installer..." = "正在下载官方安装包...";
+"The VM guest engine is currently stopped. Please start the engine using the 'System Controls' panel below." = "虚拟机引擎当前已停止。请使用下方的“系统控制”面板启动引擎。";
+
+/* Menu Bar & Dashboard */
+"Overview" = "概览";
+"Resource Utilization" = "资源利用率";
+"Open Kapsel" = "打开 Kapsel";
+"Quit Kapsel" = "退出 Kapsel";
+"Open" = "打开";
+"Settings…" = "设置…";
+"Show All Containers…" = "显示全部容器…";
 
 /* TerminalView */
 "No terminal output available" = "无控制台日志输出";
@@ -240,6 +272,10 @@
 /* Added Missing Keys */
 "%lld Cores" = "%lld 核";
 "The apple/container CLI runs on top of a lightweight guest Linux VM. Start the engine VM first to load images and containers." = "apple/container 命令行工具运行在轻量级的 Linux 虚拟机之上。请先启动引擎虚拟机以加载镜像和运行容器。";
+"Container API is online" = "Container API 已在线";
+"Tap play to start the engine" = "点击播放按钮启动引擎";
+"Checking container CLI installation" = "正在检查 container CLI 安装状态";
+"Install the engine to get started" = "安装引擎后即可开始使用";
 "Start Engine" = "启动引擎";
 "Stop Engine" = "停止引擎";
 "Launch a dedicated BuildKit environment to compile OCI container images with high performance using local Dockerfiles." = "启动专用的 BuildKit 构建环境，可使用本地 Dockerfile 高性能编译 OCI 容器镜像。";

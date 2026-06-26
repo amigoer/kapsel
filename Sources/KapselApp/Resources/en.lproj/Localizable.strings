@@ -216,6 +216,10 @@
 "Engine is offline. System logs are empty." = "Engine is offline. System logs are empty.";
 
 /* SettingsView */
+"General" = "General";
+"App Language" = "App Language";
+"System Default" = "System Default";
+"Language changes take effect immediately." = "Language changes take effect immediately.";
 "Engine Executable Configuration" = "Engine Executable Configuration";
 "container CLI absolute path" = "container CLI absolute path";
 "Engine Status:" = "Engine Status:";
@@ -232,6 +236,34 @@
 "No engine version detected" = "No engine version detected";
 "Online" = "Online";
 "Offline" = "Offline";
+"Installation failed: %@" = "Installation failed: %@";
+"Installation finished, but the container CLI was not detected yet." = "Installation finished, but the container CLI was not detected yet.";
+"Engine installed successfully." = "Engine installed successfully.";
+"Installer opened. Complete the setup, then click Recheck Installation." = "Installer opened. Complete the setup, then click Recheck Installation.";
+"Recheck Installation" = "Recheck Installation";
+"Container Engine Not Installed" = "Container Engine Not Installed";
+"The apple/container CLI was not found on this Mac. Install it with one click, or download the official installer package." = "The apple/container CLI was not found on this Mac. Install it with one click, or download the official installer package.";
+"Install Engine" = "Install Engine";
+"Install via Homebrew" = "Install via Homebrew";
+"Download Installer" = "Download Installer";
+"View Releases" = "View Releases";
+"Engine Setup" = "Engine Setup";
+"Advanced: Configure CLI Path Manually" = "Advanced: Configure CLI Path Manually";
+"Detecting Engine..." = "Detecting Engine...";
+"Detecting container engine..." = "Detecting container engine...";
+"Homebrew cask unavailable. Downloading official installer instead..." = "Homebrew cask unavailable. Downloading official installer instead...";
+"Downloading official installer..." = "Downloading official installer...";
+"Engine Not Installed" = "Engine Not Installed";
+"The VM guest engine is currently stopped. Please start the engine using the 'System Controls' panel below." = "The VM guest engine is currently stopped. Please start the engine using the 'System Controls' panel below.";
+
+/* Menu Bar & Dashboard */
+"Overview" = "Overview";
+"Resource Utilization" = "Resource Utilization";
+"Open Kapsel" = "Open Kapsel";
+"Quit Kapsel" = "Quit Kapsel";
+"Open" = "Open";
+"Settings…" = "Settings…";
+"Show All Containers…" = "Show All Containers…";
 
 /* TerminalView */
 "No terminal output available" = "No terminal output available";
@@ -240,7 +272,12 @@
 /* Added Missing Keys */
 "%lld Cores" = "%lld Cores";
 "The apple/container CLI runs on top of a lightweight guest Linux VM. Start the engine VM first to load images and containers." = "The apple/container CLI runs on top of a lightweight guest Linux VM. Start the engine VM first to load images and containers.";
+"Container API is online" = "Container API is online";
+"Tap play to start the engine" = "Tap play to start the engine";
+"Checking container CLI installation" = "Checking container CLI installation";
+"Install the engine to get started" = "Install the engine to get started";
 "Start Engine" = "Start Engine";
+"Stop Engine" = "Stop Engine";
 "Stop Engine" = "Stop Engine";
 "Launch a dedicated BuildKit environment to compile OCI container images with high performance using local Dockerfiles." = "Launch a dedicated BuildKit environment to compile OCI container images with high performance using local Dockerfiles.";
 "Start Builder" = "Start Builder";

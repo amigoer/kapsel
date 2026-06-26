@@ -34,14 +34,25 @@ public final class CLIService: Sendable {
     /// UserDefaults key for custom CLI path configuration
     private static let cliPathKey = "com.kapsel.cliPath"
     
-    /// Get or set the container CLI path (defaults to Homebrew path on Apple Silicon Macs)
+    /// Get or set the container CLI path (defaults to the first known install location)
     public var cliPath: String {
         get {
-            UserDefaults.standard.string(forKey: Self.cliPathKey) ?? "/opt/homebrew/bin/container"
+            if let stored = UserDefaults.standard.string(forKey: Self.cliPathKey),
+               FileManager.default.fileExists(atPath: stored) {
+                return stored
+            }
+            return EngineInstallService.shared.findInstalledCLIPath()
+                ?? EngineInstallService.candidateCLIPaths[0]
         }
         set {
             UserDefaults.standard.set(newValue, forKey: Self.cliPathKey)
         }
+    }
+
+    /// Whether the configured CLI binary exists on disk
+    public var isInstalled: Bool {
+        FileManager.default.fileExists(atPath: cliPath)
+            || EngineInstallService.shared.isCLIInstalled()
     }
     
     public init() {}
@@ -238,6 +249,54 @@ public final class CLIService: Sendable {
         }.value
     }
     
+    /// Executes a command and returns stdout even when the process exits non-zero
+    public func runAllowingFailure(arguments: [String]) async throws -> (output: String, exitCode: Int32) {
+        let path = self.cliPath
+
+        guard FileManager.default.fileExists(atPath: path) else {
+            throw CLIError.cliNotFound(path: path)
+        }
+
+        return try await Task.detached {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: path)
+            process.arguments = arguments
+
+            let stdoutPipe = Pipe()
+            let stderrPipe = Pipe()
+            process.standardOutput = stdoutPipe
+            process.standardError = stderrPipe
+
+            do {
+                try process.run()
+            } catch {
+                throw CLIError.executionFailed(
+                    command: "container \(arguments.joined(separator: " "))",
+                    exitCode: -1,
+                    stderr: error.localizedDescription
+                )
+            }
+
+            let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+            let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+
+            let output = String(data: stdoutData, encoding: .utf8) ?? ""
+            let errorOutput = String(data: stderrData, encoding: .utf8) ?? ""
+
+            if output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               process.terminationStatus != 0 {
+                throw CLIError.executionFailed(
+                    command: "container \(arguments.joined(separator: " "))",
+                    exitCode: process.terminationStatus,
+                    stderr: errorOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            }
+
+            return (output, process.terminationStatus)
+        }.value
+    }
+
     /// Executes a command and decodes JSON output into a Decodable structure
     /// - Parameters:
     ///   - arguments: Command line arguments

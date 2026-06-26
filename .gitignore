@@ -5,25 +5,52 @@
 # Build artifacts
 build/
 DerivedData/
+*.dSYM/
+*.dSYM.zip
+*.ipa
+*.xcarchive
 
 # User settings
 xcuserdata/
 *.xcuserdatad
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
 *.xcworkspace
 !default.xcworkspace
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
 
-# Architecture-specific files (e.g. pods, carthage)
 # Carthage
 Carthage/Build/
 
 # Swift Package Manager
-#
-# Add this line if you want to avoid checking in SPM packages.
 .build/
 .swiftpm/
+Packages/
+Package.pins
 
 # macOS Finder files
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Editors & local tooling
+.idea/
+.vscode/
+*.swp
+*~
+.cursor/
 
 # Local configuration files
 .env
