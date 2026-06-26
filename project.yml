@@ -1,0 +1,27 @@
+name: Kapsel
+options:
+  bundleIdPrefix: com.amigoer
+targets:
+  KapselKit:
+    type: library.static
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/KapselKit
+
+  Kapsel:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/KapselApp
+    dependencies:
+      - target: KapselKit
+    settings:
+      base:
+        # 自动生成 Info.plist 并指定 macOS 程序的 Principal Class
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
+        CODE_SIGN_IDENTITY: "-" # 强制使用本地 Ad-Hoc 签名，免去开发者证书限制
