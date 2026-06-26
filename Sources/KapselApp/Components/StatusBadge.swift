@@ -10,7 +10,7 @@ struct StatusBadge: View {
             Circle()
                 .fill(color)
                 .frame(width: 8, height: 8)
-            Text(status.displayName)
+            Text(LocalizedStringKey(status.displayName))
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundColor(color)

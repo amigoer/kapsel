@@ -268,11 +268,11 @@ struct DashboardView: View {
         Task {
             do {
                 try await ContainerService.shared.runContainer(image: quickRunImage, name: nil)
-                runSuccessMessage = "Container \(quickRunImage) successfully deployed in background."
+                runSuccessMessage = String(localized: "Container \(quickRunImage) successfully deployed in background.")
                 quickRunImage = ""
                 await refreshData()
             } catch {
-                runErrorMessage = "Deployment failed: \(error.localizedDescription)"
+                runErrorMessage = String(localized: "Deployment failed: \(error.localizedDescription)")
             }
             isQuickRunning = false
         }
@@ -285,10 +285,10 @@ struct DashboardView: View {
             do {
                 if isVMRunning {
                     try await SystemService.shared.stopSystem()
-                    controlSuccessMessage = "Engine VM successfully stopped."
+                    controlSuccessMessage = String(localized: "Engine VM successfully stopped.")
                 } else {
                     try await SystemService.shared.startSystem()
-                    controlSuccessMessage = "Engine VM successfully started."
+                    controlSuccessMessage = String(localized: "Engine VM successfully started.")
                 }
                 await refreshData()
             } catch {
@@ -303,7 +303,7 @@ struct DashboardView: View {
             controlSuccessMessage = nil
             do {
                 try await SystemService.shared.startBuilder()
-                controlSuccessMessage = "BuildKit environment successfully started."
+                controlSuccessMessage = String(localized: "BuildKit environment successfully started.")
                 await refreshData()
             } catch {
                 controlErrorMessage = error.localizedDescription
@@ -317,7 +317,7 @@ struct DashboardView: View {
             controlSuccessMessage = nil
             do {
                 try await ImageService.shared.pruneImages()
-                controlSuccessMessage = "Images successfully pruned."
+                controlSuccessMessage = String(localized: "Images successfully pruned.")
                 await refreshData()
             } catch {
                 controlErrorMessage = error.localizedDescription
@@ -345,7 +345,7 @@ struct MetricCard: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Text(value)
@@ -389,7 +389,7 @@ struct ResourceGauge: View {
                     .font(.system(size: 14, weight: .bold, design: .rounded))
             }
             
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.caption)
                 .fontWeight(.medium)
         }

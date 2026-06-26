@@ -62,7 +62,7 @@ struct SystemServiceView: View {
                                 Circle()
                                     .fill(engineRunning ? Color.green : Color.red)
                                     .frame(width: 8, height: 8)
-                                Text(engineRunning ? "Running" : "Stopped")
+                                Text(engineRunning ? LocalizedStringKey("Running") : LocalizedStringKey("Stopped"))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -109,7 +109,7 @@ struct SystemServiceView: View {
                                 Circle()
                                     .fill(builderRunning ? Color.green : Color.red)
                                     .frame(width: 8, height: 8)
-                                Text(builderRunning ? "Running" : "Stopped")
+                                Text(builderRunning ? LocalizedStringKey("Running") : LocalizedStringKey("Stopped"))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -143,7 +143,7 @@ struct SystemServiceView: View {
                         
                         HStack {
                             Text("Current Resolution:")
-                            Text(dnsDomain.isEmpty ? "Not configured (Default Bridge)" : dnsDomain)
+                            Text(dnsDomain.isEmpty ? LocalizedStringKey("Not configured (Default Bridge)") : LocalizedStringKey(dnsDomain))
                                 .fontWeight(.bold)
                                 .foregroundColor(.blue)
                             Spacer()
@@ -270,16 +270,16 @@ struct SystemServiceView: View {
                 registryStatus = try await SystemService.shared.listRegistries()
                 systemLogs = try await SystemService.shared.getSystemLogs()
             } else {
-                systemProperties = "Engine is offline. VM properties are not loaded."
-                registryStatus = "Engine is offline. Private registries not loaded."
-                systemLogs = "Engine is offline. System logs are empty."
+                systemProperties = String(localized: "Engine is offline. VM properties are not loaded.")
+                registryStatus = String(localized: "Engine is offline. Private registries not loaded.")
+                systemLogs = String(localized: "Engine is offline. System logs are empty.")
             }
         } catch {
             engineRunning = false
-            systemProperties = "Engine is offline. VM properties are not loaded."
-            registryStatus = "Engine is offline. Private registries not loaded."
-            systemLogs = "Engine is offline. System logs are empty."
-            errorMessage = "Failed to load system status: \(error.localizedDescription)"
+            systemProperties = String(localized: "Engine is offline. VM properties are not loaded.")
+            registryStatus = String(localized: "Engine is offline. Private registries not loaded.")
+            systemLogs = String(localized: "Engine is offline. System logs are empty.")
+            errorMessage = String(localized: "Failed to load system status: \(error.localizedDescription)")
         }
         isLoading = false
     }
@@ -289,7 +289,7 @@ struct SystemServiceView: View {
         Task {
             do {
                 try await SystemService.shared.startSystem()
-                successMessage = "Engine VM successfully started."
+                successMessage = String(localized: "Engine VM successfully started.")
                 await refreshAll()
             } catch {
                 errorMessage = error.localizedDescription
@@ -303,7 +303,7 @@ struct SystemServiceView: View {
         Task {
             do {
                 try await SystemService.shared.stopSystem()
-                successMessage = "Engine VM gracefully stopped."
+                successMessage = String(localized: "Engine VM gracefully stopped.")
                 await refreshAll()
             } catch {
                 errorMessage = error.localizedDescription
@@ -317,7 +317,7 @@ struct SystemServiceView: View {
         Task {
             do {
                 try await SystemService.shared.startBuilder()
-                successMessage = "BuildKit VM service successfully started."
+                successMessage = String(localized: "BuildKit VM service successfully started.")
                 await refreshAll()
             } catch {
                 errorMessage = error.localizedDescription
@@ -330,7 +330,7 @@ struct SystemServiceView: View {
         Task {
             do {
                 try await SystemService.shared.setDefaultDNS(domain: newDNS)
-                successMessage = "DNS domain configured to: \(newDNS)"
+                successMessage = String(localized: "DNS domain configured to: \(newDNS)")
                 newDNS = ""
                 await refreshAll()
             } catch {
@@ -344,7 +344,7 @@ struct SystemServiceView: View {
         Task {
             do {
                 try await SystemService.shared.loginRegistry(url: regURL, username: regUser, password: regPass)
-                successMessage = "Registry credentials for \(regURL) configured."
+                successMessage = String(localized: "Registry credentials for \(regURL) configured.")
                 regURL = ""
                 regUser = ""
                 regPass = ""

@@ -94,7 +94,7 @@ struct ContainerListView: View {
                     ContentUnavailableView(
                         "No Containers Found",
                         systemImage: "shippingbox",
-                        description: Text(searchText.isEmpty ? "Click 'Deploy Container' at the top right to create your first container instance." : "Try changing search terms")
+                        description: Text(searchText.isEmpty ? LocalizedStringKey("Click 'Deploy Container' at the top right to create your first container instance.") : LocalizedStringKey("Try changing search terms"))
                     )
                     Spacer()
                 }
@@ -222,7 +222,7 @@ struct ContainerListView: View {
         .sheet(item: $selectedContainerForLogs) { container in
             VStack(spacing: 0) {
                 HStack {
-                    Text("Container Logs - \(container.name)")
+                    Text(String(localized: "Container Logs - \(container.name)"))
                         .font(.headline)
                     Spacer()
                     
@@ -332,11 +332,11 @@ struct ContainerListView: View {
     
     private func deleteContainer(_ container: Container) {
         let alert = NSAlert()
-        alert.messageText = "Confirm Deletion"
-        alert.informativeText = "Are you sure you want to delete container: \(container.name)? This action cannot be undone."
+        alert.messageText = String(localized: "Confirm Deletion")
+        alert.informativeText = String(localized: "Are you sure you want to delete container: \(container.name)? This action cannot be undone.")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Delete")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Delete"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
@@ -357,13 +357,13 @@ struct ContainerListView: View {
     
     private func fetchLogs(for container: Container) {
         isFetchingLogs = true
-        containerLogs = "Fetching logs..."
+        containerLogs = String(localized: "Fetching logs...")
         Task {
             do {
                 let logs = try await ContainerService.shared.getLogs(name: container.name)
                 containerLogs = logs
             } catch {
-                containerLogs = "Failed to fetch logs: \(error.localizedDescription)"
+                containerLogs = String(localized: "Failed to fetch logs: \(error.localizedDescription)")
             }
             isFetchingLogs = false
         }

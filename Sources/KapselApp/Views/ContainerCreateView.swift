@@ -272,7 +272,7 @@ struct ContainerCreateView: View {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.title = "Select Host Mount Directory"
+        panel.title = String(localized: "Select Host Mount Directory")
         if panel.runModal() == .OK {
             if let path = panel.url?.path, let index = volumeMounts.firstIndex(where: { $0.id == id }) {
                 volumeMounts[index].host = path
@@ -341,7 +341,7 @@ struct ContainerCreateView: View {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "Failed to deploy container: \(error.localizedDescription)"
+                    errorMessage = String(localized: "Failed to deploy container: \(error.localizedDescription)")
                     isDeploying = false
                 }
             }

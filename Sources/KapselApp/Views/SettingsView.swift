@@ -27,14 +27,14 @@ struct SettingsView: View {
                             Circle()
                                 .fill(engineOnline ? Color.green : Color.red)
                                 .frame(width: 8, height: 8)
-                            Text(engineOnline ? "Online" : "Offline")
+                            Text(engineOnline ? LocalizedStringKey("Online") : LocalizedStringKey("Offline"))
                                 .foregroundColor(engineOnline ? .green : .red)
                         }
                     }
                     
                     HStack(spacing: 6) {
                         Text("Engine Version:")
-                        Text(cliVersion)
+                        Text(LocalizedStringKey(cliVersion))
                             .font(.system(.body, design: .monospaced))
                             .foregroundColor(.secondary)
                     }
@@ -175,7 +175,7 @@ struct SettingsView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.title = "Locate container CLI tool"
+        panel.title = String(localized: "Locate container CLI tool")
         
         if panel.runModal() == .OK {
             cliPath = panel.url?.path ?? ""

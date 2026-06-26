@@ -75,12 +75,26 @@ struct ContainerDetailView: View {
                             LabeledContent("ID", value: d.id)
                             LabeledContent("Name", value: d.name)
                             LabeledContent("Image", value: d.image)
-                            LabeledContent("Status", value: d.status.uppercased())
+                            LabeledContent("Status") {
+                                Text(LocalizedStringKey(d.status.capitalized))
+                            }
                         }
                         
                         Section("Resources & Platform") {
-                            LabeledContent("CPU Limit", value: d.cpus != nil ? "\(d.cpus!) Cores" : "Unlimited")
-                            LabeledContent("Memory Limit", value: d.memory ?? "Unlimited")
+                            LabeledContent("CPU Limit") {
+                                if let cpus = d.cpus {
+                                    Text("\(cpus) Cores")
+                                } else {
+                                    Text("Unlimited")
+                                }
+                            }
+                            LabeledContent("Memory Limit") {
+                                if let memory = d.memory {
+                                    Text(memory)
+                                } else {
+                                    Text("Unlimited")
+                                }
+                            }
                             LabeledContent("Hostname", value: d.hostname ?? "-")
                             LabeledContent("Platform", value: "\(d.os ?? "linux")/\(d.arch ?? "arm64")")
                         }
@@ -134,8 +148,13 @@ struct ContainerDetailView: View {
                                     Text(vol.containerPath)
                                 }
                                 TableColumn("Access Mode") { vol in
-                                    Text(vol.readOnly ? "Read-Only (ro)" : "Read-Write (rw)")
-                                        .foregroundColor(vol.readOnly ? .orange : .green)
+                                    if vol.readOnly {
+                                        Text("Read-Only (ro)")
+                                            .foregroundColor(.orange)
+                                    } else {
+                                        Text("Read-Write (rw)")
+                                            .foregroundColor(.green)
+                                    }
                                 }
                             }
                             .border(Color.secondary.opacity(0.15))
@@ -249,13 +268,13 @@ struct ContainerDetailView: View {
     
     private func fetchLogs() {
         isFetchingLogs = true
-        logs = "Fetching logs..."
+        logs = String(localized: "Fetching logs...")
         Task {
             do {
                 let fetched = try await ContainerService.shared.getLogs(name: containerName)
                 logs = fetched
             } catch {
-                logs = "Failed to fetch logs: \(error.localizedDescription)"
+                logs = String(localized: "Failed to fetch logs: \(error.localizedDescription)")
             }
             isFetchingLogs = false
         }
@@ -264,14 +283,14 @@ struct ContainerDetailView: View {
     private func executeExecCommand() {
         guard !execCommandText.isEmpty else { return }
         isExecutingExec = true
-        execResult = "Executing command: \(execCommandText)..."
+        execResult = String(localized: "Executing command: \(execCommandText)...")
         
         Task {
             do {
                 let result = try await ContainerService.shared.execCommand(name: containerName, command: execCommandText)
                 execResult = result
             } catch {
-                execResult = "Execution failed: \(error.localizedDescription)"
+                execResult = String(localized: "Execution failed: \(error.localizedDescription)")
             }
             isExecutingExec = false
         }

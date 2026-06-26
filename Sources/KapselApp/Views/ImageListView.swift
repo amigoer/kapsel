@@ -231,34 +231,34 @@ struct ImageListView: View {
         } message: {
             Text(successMessage ?? "")
         }
-        .confirmationDialog("Confirm Deletion", isPresented: $showDeleteConfirmation) {
-            Button("Delete", role: .destructive) {
+        .confirmationDialog(String(localized: "Confirm Deletion"), isPresented: $showDeleteConfirmation) {
+            Button(String(localized: "Delete"), role: .destructive) {
                 if let image = imageToDelete {
                     Task { await deleteImage(image) }
                 }
             }
-            Button("Cancel", role: .cancel) { imageToDelete = nil }
+            Button(String(localized: "Cancel"), role: .cancel) { imageToDelete = nil }
         } message: {
-            Text("Are you sure you want to delete image \"\(imageToDelete?.fullName ?? "")\"? This action cannot be undone.")
+            Text(String(localized: "Are you sure you want to delete image \"\(imageToDelete?.fullName ?? "")\"? This action cannot be undone."))
         }
-        .confirmationDialog("Confirm Pruning", isPresented: $showPruneConfirmation) {
-            Button("Prune", role: .destructive) {
+        .confirmationDialog(String(localized: "Confirm Pruning"), isPresented: $showPruneConfirmation) {
+            Button(String(localized: "Prune"), role: .destructive) {
                 Task { await pruneImages() }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(String(localized: "Cancel"), role: .cancel) {}
         } message: {
-            Text("This action will remove all local images not currently used by any containers. Do you want to proceed?")
+            Text(String(localized: "This action will remove all local images not currently used by any containers. Do you want to proceed?"))
         }
-        .alert("Tag Image", isPresented: $showTagAlert) {
-            TextField("New tag (e.g. myapp:v2)", text: $newTagName)
-            Button("OK") {
+        .alert(String(localized: "Tag Image"), isPresented: $showTagAlert) {
+            TextField(String(localized: "New tag (e.g. myapp:v2)"), text: $newTagName)
+            Button(String(localized: "OK")) {
                 if let image = imageToTag, !newTagName.isEmpty {
                     Task { await tagImage(image, newTag: newTagName) }
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(String(localized: "Cancel"), role: .cancel) {}
         } message: {
-            Text("Enter a new tag name for \(imageToTag?.fullName ?? "")")
+            Text(String(localized: "Enter a new tag name for \(imageToTag?.fullName ?? "")"))
         }
         .sheet(isPresented: $isShowingBuildSheet) {
             NavigationStack {
@@ -367,7 +367,7 @@ struct ImageListView: View {
     private func tagImage(_ image: ContainerImage, newTag: String) async {
         do {
             try await ImageService.shared.tagImage(source: image.fullName, target: newTag)
-            successMessage = "Tag \(newTag) successfully created."
+            successMessage = String(localized: "Tag \(newTag) successfully created.")
             await loadImages()
         } catch {
             errorMessage = error.localizedDescription
@@ -377,7 +377,7 @@ struct ImageListView: View {
     private func pushImage(_ image: ContainerImage) async {
         do {
             try await ImageService.shared.pushImage(name: image.fullName)
-            successMessage = "Image \(image.fullName) successfully pushed."
+            successMessage = String(localized: "Image \(image.fullName) successfully pushed.")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -386,7 +386,7 @@ struct ImageListView: View {
     private func pruneImages() async {
         do {
             try await ImageService.shared.pruneImages()
-            successMessage = "Unused images successfully pruned."
+            successMessage = String(localized: "Unused images successfully pruned.")
             await loadImages()
         } catch {
             errorMessage = error.localizedDescription
@@ -398,7 +398,7 @@ struct ImageListView: View {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.title = "Select directory containing Dockerfile"
+        panel.title = String(localized: "Select directory containing Dockerfile")
         
         if panel.runModal() == .OK {
             buildContextPath = panel.url?.path ?? ""
@@ -410,7 +410,7 @@ struct ImageListView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.title = "Select Dockerfile"
+        panel.title = String(localized: "Select Dockerfile")
         panel.allowedContentTypes = [.data]
         
         if panel.runModal() == .OK {

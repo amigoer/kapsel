@@ -62,7 +62,7 @@ struct MainView: View {
                             .fill(statusColor)
                             .frame(width: 8, height: 8)
                         
-                        Text(statusText)
+                        Text(LocalizedStringKey(statusText))
                             .font(.footnote)
                             .foregroundColor(.secondary)
                         
