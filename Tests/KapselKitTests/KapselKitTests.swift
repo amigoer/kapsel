@@ -75,4 +75,39 @@ final class KapselKitTests: XCTestCase {
         let response = try SystemStatusResponse.decode(from: rawJSON)
         XCTAssertFalse(response.isRunning)
     }
+
+    func testRequiresKernelConfigurationDetection() {
+        let error = CLIError.executionFailed(
+            command: "container builder start",
+            exitCode: 1,
+            stderr: "default kernel not configured for architecture arm64, please use the `container system kernel set` command to configure it"
+        )
+        XCTAssertTrue(SystemService.requiresKernelConfiguration(error))
+        XCTAssertFalse(SystemService.requiresKernelConfiguration(CLIError.invalidOutput))
+    }
+
+    func testKernelConfigurationParsing() {
+        let propertyList = """
+        [kernel]
+        binaryPath = "opt/kata/share/kata-containers/vmlinux-6.18.15-186"
+        url = "https://github.com/kata-containers/kata-containers/releases/download/3.28.0/kata-static-3.28.0-arm64.tar.zst"
+        """
+
+        let tempRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kapsel-kernel-test-\(UUID().uuidString)")
+        let kernelsDir = tempRoot.appendingPathComponent("kernels")
+        try? FileManager.default.createDirectory(at: kernelsDir, withIntermediateDirectories: true)
+
+        let kernelFile = kernelsDir.appendingPathComponent("vmlinux-6.18.15-186")
+        FileManager.default.createFile(atPath: kernelFile.path, contents: Data([0x01]))
+
+        let config = KernelConfiguration.load(propertyList: propertyList, appRoot: tempRoot.path)
+
+        XCTAssertTrue(config.isInstalled)
+        XCTAssertEqual(config.versionLabel, "6.18.15-186")
+        XCTAssertEqual(config.archiveMemberPath, "opt/kata/share/kata-containers/vmlinux-6.18.15-186")
+        XCTAssertNotNil(config.sourceURL)
+
+        try? FileManager.default.removeItem(at: tempRoot)
+    }
 }

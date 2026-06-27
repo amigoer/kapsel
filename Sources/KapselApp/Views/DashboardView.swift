@@ -4,6 +4,7 @@ import KapselKit
 /// Dashboard view displaying VM resource stats and system control status
 struct DashboardView: View {
     @Environment(EngineStatusModel.self) private var engineStatus
+    @Environment(EngineRuntimeModel.self) private var engineRuntime
     @Environment(DashboardStore.self) private var store
 
     @State private var isRefreshing = false
@@ -15,6 +16,13 @@ struct DashboardView: View {
 
     @State private var controlErrorMessage: String? = nil
     @State private var controlSuccessMessage: String? = nil
+
+    @State private var buildKitPhase: BuildKitOperationPhase?
+    @State private var buildKitInstallProgress: KernelInstallProgress?
+    @State private var buildKitFeedback: String?
+    @State private var buildKitFeedbackIsError = false
+    @State private var showBuildKitAlert = false
+    @State private var showUninstallKernelConfirm = false
 
     var body: some View {
         Form {
@@ -35,7 +43,7 @@ struct DashboardView: View {
                         }
                     }
                 }
-            } else if !store.isVMRunning {
+            } else if !engineRuntime.isRunning {
                 Section {
                     Label {
                         Text("The VM guest engine is currently stopped. Start the engine from System Controls below.")
@@ -47,75 +55,146 @@ struct DashboardView: View {
             }
 
             Section("Overview") {
-                HStack(spacing: 0) {
-                    MetricTile(icon: "shippingbox", value: store.containerCount, title: "Containers", tint: .blue)
-                    Divider().frame(height: 48)
-                    MetricTile(icon: "play.circle", value: store.runningContainerCount, title: "Running", tint: .green)
-                    Divider().frame(height: 48)
-                    MetricTile(icon: "photo.stack", value: store.imageCount, title: "Images", tint: .purple)
+                LabeledContent {
+                    Text("\(store.containerCount)")
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                } label: {
+                    Label("Containers", systemImage: "shippingbox")
                 }
-                .padding(.vertical, 8)
+
+                LabeledContent {
+                    Text("\(store.runningContainerCount)")
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                } label: {
+                    Label("Running", systemImage: "play.circle")
+                }
+
+                LabeledContent {
+                    Text("\(store.imageCount)")
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                } label: {
+                    Label("Images", systemImage: "photo.stack")
+                }
             }
 
             Section("Resource Utilization") {
-                HStack(spacing: 0) {
-                    ResourceGauge(title: "CPU Usage", value: store.isVMRunning ? 0.12 : 0, tint: .blue)
-                    ResourceGauge(title: "Memory Usage", value: store.isVMRunning ? 0.35 : 0, tint: .orange)
-                    ResourceGauge(title: "Disk Usage", value: store.isVMRunning ? 0.58 : 0, tint: .purple)
+                HStack(spacing: 28) {
+                    ResourceGaugeRing(
+                        title: "CPU Usage",
+                        icon: "cpu",
+                        value: engineRuntime.isRunning ? 0.12 : 0,
+                        tint: .blue,
+                        isActive: engineRuntime.isRunning,
+                        detailLines: cpuDetailLines
+                    )
+                    ResourceGaugeRing(
+                        title: "Memory Usage",
+                        icon: "memorychip",
+                        value: engineRuntime.isRunning ? 0.35 : 0,
+                        tint: .orange,
+                        isActive: engineRuntime.isRunning,
+                        detailLines: memoryDetailLines
+                    )
+                    ResourceGaugeRing(
+                        title: "Disk Usage",
+                        icon: "internaldrive",
+                        value: engineRuntime.isRunning ? 0.58 : 0,
+                        tint: .purple,
+                        isActive: engineRuntime.isRunning,
+                        detailLines: diskDetailLines
+                    )
                 }
-                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .listRowInsets(EdgeInsets(top: 10, leading: 20, bottom: 10, trailing: 20))
             }
 
             Section("Quick Deploy Container") {
-                TextField("Enter OCI image name, e.g. nginx:alpine", text: $quickRunImage)
-                    .disabled(isQuickRunning || !store.isVMRunning || !engineStatus.isCLIInstalled)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 12) {
+                        TextField("Enter OCI image name, e.g. nginx:alpine", text: $quickRunImage)
+                            .textFieldStyle(.roundedBorder)
+                            .disabled(isQuickRunning || !engineRuntime.isRunning || !engineStatus.isCLIInstalled)
+                            .onSubmit { quickRunContainer() }
 
-                Button {
-                    quickRunContainer()
-                } label: {
-                    if isQuickRunning {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Label("Deploy", systemImage: "play.fill")
+                        Button {
+                            quickRunContainer()
+                        } label: {
+                            if isQuickRunning {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .frame(width: 52)
+                            } else {
+                                Label("Deploy", systemImage: "play.fill")
+                                    .labelStyle(.titleOnly)
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.regular)
+                        .disabled(quickRunImage.isEmpty || isQuickRunning || !engineRuntime.isRunning || !engineStatus.isCLIInstalled)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .keyboardShortcut(.defaultAction)
+                    }
+
+                    if !engineRuntime.isRunning && engineStatus.isCLIInstalled {
+                        Label("Start the engine before deploying containers.", systemImage: "info.circle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let success = runSuccessMessage {
+                        Text(success)
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    }
+                    if let error = runErrorMessage {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
                 }
-                .disabled(quickRunImage.isEmpty || isQuickRunning || !store.isVMRunning || !engineStatus.isCLIInstalled)
-
-                if let success = runSuccessMessage {
-                    Text(success)
-                        .foregroundStyle(.green)
-                }
-                if let error = runErrorMessage {
-                    Text(error)
-                        .foregroundStyle(.red)
-                }
+                .padding(.vertical, 4)
             }
 
             Section("System Controls") {
                 LabeledContent {
-                    Button(store.isVMRunning ? "Stop" : "Start") {
-                        toggleEngineVM()
+                    if engineRuntime.isToggling {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Toggle("", isOn: engineVMToggle)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .disabled(!engineStatus.isCLIInstalled)
                     }
-                    .disabled(!engineStatus.isCLIInstalled)
                 } label: {
                     Label("Engine VM", systemImage: "macpro.gen3")
                 }
 
-                LabeledContent {
-                    Button(store.isBuilderRunning ? "Running" : "Start") {
-                        startBuildKit()
-                    }
-                    .disabled(store.isBuilderRunning || !store.isVMRunning || !engineStatus.isCLIInstalled)
-                } label: {
-                    Label("BuildKit Builder", systemImage: "hammer.fill")
-                }
+                BuildKitKernelControls(
+                    kernelInstalled: store.kernelInstalled,
+                    kernelVersion: store.kernelVersion,
+                    builderRunning: store.isBuilderRunning,
+                    engineRunning: engineRuntime.isRunning,
+                    cliInstalled: engineStatus.isCLIInstalled,
+                    operationPhase: buildKitPhase,
+                    installProgress: buildKitInstallProgress,
+                    feedback: buildKitFeedback,
+                    feedbackIsError: buildKitFeedbackIsError,
+                    needsKernel: !store.kernelInstalled,
+                    onToggleBuilder: toggleBuildKit,
+                    onInstallKernel: installKernelAndStartBuildKit,
+                    onUninstallKernel: { showUninstallKernelConfirm = true }
+                )
 
                 LabeledContent {
                     Button("Prune") {
                         pruneLocalImages()
                     }
-                    .disabled(!store.isVMRunning || !engineStatus.isCLIInstalled)
+                    .disabled(!engineRuntime.isRunning || !engineStatus.isCLIInstalled)
                 } label: {
                     Label("Unused Images", systemImage: "trash.fill")
                 }
@@ -148,6 +227,77 @@ struct DashboardView: View {
         .onChange(of: engineStatus.installStatus) { _, _ in
             Task { await refreshData() }
         }
+        .onChange(of: engineRuntime.isRunning) { _, _ in
+            Task { await refreshData() }
+        }
+        .restoreSidebarFocusWhenLoaded(store.hasLoaded)
+        .alert("BuildKit Builder", isPresented: $showBuildKitAlert) {
+            if !store.kernelInstalled {
+                Button("Install Recommended Kernel") {
+                    installKernelAndStartBuildKit()
+                }
+            }
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let buildKitFeedback, buildKitFeedbackIsError {
+                Text(buildKitFeedback)
+            }
+        }
+        .confirmationDialog(
+            "Uninstall Linux Kernel?",
+            isPresented: $showUninstallKernelConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Uninstall Kernel", role: .destructive) {
+                uninstallKernel()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("BuildKit and container builds will stop working until you install a kernel again. Existing containers are not removed.")
+        }
+    }
+
+    private var engineVMToggle: Binding<Bool> {
+        Binding(
+            get: { engineRuntime.isRunning },
+            set: { newValue in
+                guard newValue != engineRuntime.isRunning, !engineRuntime.isToggling else { return }
+                toggleEngineVM()
+            }
+        )
+    }
+
+    private var cpuDetailLines: [ResourceGaugeDetailLine] {
+        guard engineRuntime.isRunning else {
+            return [ResourceGaugeDetailLine(label: "Engine Status", value: String(localized: "Offline"))]
+        }
+        return [
+            ResourceGaugeDetailLine(label: "Current Usage", value: "12%"),
+            ResourceGaugeDetailLine(label: "VM Allocation", value: "2 cores"),
+            ResourceGaugeDetailLine(label: "Engine Status", value: String(localized: "Running"))
+        ]
+    }
+
+    private var memoryDetailLines: [ResourceGaugeDetailLine] {
+        guard engineRuntime.isRunning else {
+            return [ResourceGaugeDetailLine(label: "Engine Status", value: String(localized: "Offline"))]
+        }
+        return [
+            ResourceGaugeDetailLine(label: "Current Usage", value: "35%"),
+            ResourceGaugeDetailLine(label: "VM Limit", value: "1 GB"),
+            ResourceGaugeDetailLine(label: "Available", value: "65%")
+        ]
+    }
+
+    private var diskDetailLines: [ResourceGaugeDetailLine] {
+        guard engineRuntime.isRunning else {
+            return [ResourceGaugeDetailLine(label: "Engine Status", value: String(localized: "Offline"))]
+        }
+        return [
+            ResourceGaugeDetailLine(label: "Current Usage", value: "58%"),
+            ResourceGaugeDetailLine(label: "VM Disk", value: String(localized: "Guest filesystem")),
+            ResourceGaugeDetailLine(label: "Engine Status", value: String(localized: "Running"))
+        ]
     }
 
     private func refreshData() async {
@@ -179,31 +329,121 @@ struct DashboardView: View {
         Task {
             controlErrorMessage = nil
             controlSuccessMessage = nil
-            do {
-                if store.isVMRunning {
-                    try await SystemService.shared.stopSystem()
-                    controlSuccessMessage = String(localized: "Engine VM successfully stopped.")
-                } else {
-                    try await SystemService.shared.startSystem()
-                    controlSuccessMessage = String(localized: "Engine VM successfully started.")
-                }
-                await refreshData()
-            } catch {
-                controlErrorMessage = error.localizedDescription
+            let wasRunning = engineRuntime.isRunning
+            await engineRuntime.toggle()
+            if wasRunning != engineRuntime.isRunning {
+                controlSuccessMessage = engineRuntime.isRunning
+                    ? String(localized: "Engine VM successfully started.")
+                    : String(localized: "Engine VM successfully stopped.")
+            } else if !engineRuntime.isToggling {
+                controlErrorMessage = String(localized: "Failed to change engine state.")
             }
+            await refreshData()
+        }
+    }
+
+    private func toggleBuildKit(_ enabled: Bool) {
+        guard enabled != store.isBuilderRunning else { return }
+        if enabled {
+            startBuildKit()
+        } else {
+            stopBuildKit()
         }
     }
 
     private func startBuildKit() {
-        Task {
-            controlErrorMessage = nil
-            controlSuccessMessage = nil
+        buildKitPhase = .startingBuilder
+        buildKitInstallProgress = nil
+        buildKitFeedback = nil
+        Task { @MainActor in
+            defer {
+                buildKitPhase = nil
+                buildKitInstallProgress = nil
+            }
             do {
                 try await SystemService.shared.startBuilder()
-                controlSuccessMessage = String(localized: "BuildKit environment successfully started.")
+                buildKitFeedback = String(localized: "BuildKit environment successfully started.")
+                buildKitFeedbackIsError = false
                 await refreshData()
             } catch {
-                controlErrorMessage = error.localizedDescription
+                buildKitFeedback = error.localizedDescription
+                buildKitFeedbackIsError = true
+                showBuildKitAlert = true
+            }
+        }
+    }
+
+    private func stopBuildKit() {
+        buildKitPhase = .stoppingBuilder
+        buildKitInstallProgress = nil
+        buildKitFeedback = nil
+        Task { @MainActor in
+            defer {
+                buildKitPhase = nil
+                buildKitInstallProgress = nil
+            }
+            do {
+                try await SystemService.shared.stopBuilder()
+                buildKitFeedback = String(localized: "BuildKit builder successfully stopped.")
+                buildKitFeedbackIsError = false
+                await refreshData()
+            } catch {
+                buildKitFeedback = error.localizedDescription
+                buildKitFeedbackIsError = true
+            }
+        }
+    }
+
+    private func installKernelAndStartBuildKit() {
+        buildKitPhase = .installingKernel
+        buildKitInstallProgress = nil
+        buildKitFeedback = nil
+        Task { @MainActor in
+            defer {
+                buildKitPhase = nil
+                buildKitInstallProgress = nil
+            }
+            do {
+                try await KernelService.shared.installRecommended { progress in
+                    Task { @MainActor in
+                        buildKitInstallProgress = progress.localizedForDisplay
+                    }
+                }
+                buildKitPhase = .startingBuilderAfterKernel
+                buildKitInstallProgress = nil
+                try await SystemService.shared.startBuilder()
+                buildKitFeedback = String(localized: "BuildKit environment successfully started.")
+                buildKitFeedbackIsError = false
+                await refreshData()
+            } catch {
+                buildKitFeedback = error.localizedDescription
+                buildKitFeedbackIsError = true
+                showBuildKitAlert = true
+            }
+        }
+    }
+
+    private func uninstallKernel() {
+        buildKitPhase = .removingKernel
+        buildKitInstallProgress = nil
+        buildKitFeedback = nil
+        Task { @MainActor in
+            defer {
+                buildKitPhase = nil
+                buildKitInstallProgress = nil
+            }
+            do {
+                try await KernelService.shared.removeInstalled { progress in
+                    Task { @MainActor in
+                        buildKitInstallProgress = progress.localizedForDisplay
+                    }
+                }
+                buildKitFeedback = String(localized: "Linux kernel successfully removed.")
+                buildKitFeedbackIsError = false
+                await refreshData()
+            } catch {
+                buildKitFeedback = error.localizedDescription
+                buildKitFeedbackIsError = true
             }
         }
     }
@@ -223,56 +463,9 @@ struct DashboardView: View {
     }
 }
 
-/// A single Overview metric (icon, large animated number, caption).
-private struct MetricTile: View {
-    let icon: String
-    let value: Int
-    let title: LocalizedStringKey
-    var tint: Color = .accentColor
-
-    var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(tint)
-            Text("\(value)")
-                .font(.system(.title, design: .rounded).weight(.semibold))
-                .contentTransition(.numericText())
-                .animation(.snappy, value: value)
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-/// A native circular gauge for a resource utilization percentage.
-private struct ResourceGauge: View {
-    let title: LocalizedStringKey
-    let value: Double
-    var tint: Color = .accentColor
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Gauge(value: value) {
-                EmptyView()
-            } currentValueLabel: {
-                Text("\(Int((value * 100).rounded()))%")
-                    .font(.caption2)
-            }
-            .gaugeStyle(.accessoryCircular)
-            .tint(tint)
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
 #Preview {
     DashboardView()
         .environment(EngineStatusModel.shared)
+        .environment(EngineRuntimeModel())
         .environment(DashboardStore())
 }

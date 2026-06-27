@@ -34,42 +34,54 @@ struct ImageListView: View {
     }
 
     var body: some View {
-        Group {
-            if !store.hasLoaded {
-                ProgressView("Loading image list...")
-            } else if store.images.isEmpty {
-                ContentUnavailableView {
-                    Label("No Local Images", systemImage: "photo.on.rectangle.angled")
-                } description: {
-                    Text("Enter an image name above to Pull, or click 'Build Image' to compile locally.")
-                } actions: {
-                    Button("Build Image") { isShowingBuildSheet = true }
-                }
-            } else {
-                imagesTable
-            }
-        }
-        .navigationTitle("Images")
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                TextField("Enter image name to pull, e.g. nginx:latest", text: $imageNamePull)
-                    .frame(minWidth: 220, maxWidth: 320)
-                    .disabled(isPulling)
-            }
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    HStack(spacing: 8) {
+                        TextField("Enter image name to pull, e.g. nginx:latest", text: $imageNamePull)
+                            .disabled(isPulling)
+                            .onSubmit { Task { await pullImage() } }
 
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    Task { await pullImage() }
-                } label: {
-                    if isPulling {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Label("Pull Image", systemImage: "arrow.down.circle")
+                        Button {
+                            Task { await pullImage() }
+                        } label: {
+                            if isPulling {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Label("Pull Image", systemImage: "arrow.down.circle")
+                            }
+                        }
+                        .disabled(imageNamePull.isEmpty || isPulling)
                     }
                 }
-                .disabled(imageNamePull.isEmpty || isPulling)
             }
+            .formStyle(.grouped)
+            .scrollDisabled(true)
 
+            Group {
+                if store.images.isEmpty {
+                    ContentUnavailableView {
+                        Label("No Local Images", systemImage: "photo.on.rectangle.angled")
+                    } description: {
+                        Text("Enter an image name above to Pull, or click 'Build Image' to compile locally.")
+                    } actions: {
+                        Button("Build Image") { isShowingBuildSheet = true }
+                    }
+                } else {
+                    imagesTable
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .overlay {
+            if !store.hasLoaded {
+                ProgressView("Loading image list...")
+            }
+        }
+        .disabled(!store.hasLoaded)
+        .navigationTitle("Images")
+        .restoreSidebarFocusWhenLoaded(store.hasLoaded)
+        .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     isShowingBuildSheet = true

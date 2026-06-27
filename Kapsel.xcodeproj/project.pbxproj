@@ -8,17 +8,23 @@
 
 /* Begin PBXBuildFile section */
 		0041D9704E842382843C0228 /* ImageListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100A65CA85AA3B042C945B20 /* ImageListView.swift */; };
+		061ABE18E0D04500C146B139 /* BuildKitKernelControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD960A8DB3BD5BCF7CA5244 /* BuildKitKernelControls.swift */; };
 		1A6B7F9D9EC3D4B4F15C49B6 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8E3C602C92B117D0380E20 /* DashboardView.swift */; };
 		1BDB5F5D988BCC42016E6A50 /* SystemServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0747801F7C8AC6295C7DB2A /* SystemServiceView.swift */; };
 		2457583A3515518DA755A5FC /* SystemService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 739254F129EC4C81C9D4BEAB /* SystemService.swift */; };
 		26D6B925B8E8FC6654201BCE /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4316AE862BCC9827B9DF6B85 /* StatusBadge.swift */; };
+		385516E61C3CB10A7A2E84C7 /* SidebarFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F2F5BFD11A3C91BC914FC7E /* SidebarFocus.swift */; };
 		4242DA8E6EF65A98B9C75757 /* ImageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A411E0513EEAFBA765D52031 /* ImageService.swift */; };
 		4C89F5499F24561C1121C327 /* EngineInstallService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F7AFBD46085BB9533B7EB0 /* EngineInstallService.swift */; };
+		4E8F44ED1FD6E156E9E36B51 /* KernelConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFE072002D99788CE03B0737 /* KernelConfiguration.swift */; };
+		529890105F99437034F29A65 /* KernelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04874A73A66ACC45695F0C60 /* KernelService.swift */; };
 		5B50B1E2AB38CF9781DC0C48 /* ContainerDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4224526A6263BBF6E4E406A1 /* ContainerDetailView.swift */; };
 		61F6DCBAB01BEB9FEB5476D4 /* AppStores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39097E07B0B5000229183ACC /* AppStores.swift */; };
 		65626FAD49D9391659BA4FF9 /* ContainerListColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 352E820B2FEC18587F319DE3 /* ContainerListColumn.swift */; };
 		6800AEA209DEA6032C3C40ED /* CLIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98A990A884530E46342926C /* CLIService.swift */; };
+		6A77203CAAB728B5DF2FF3BB /* ResourceGaugeRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1001C66B7B526DF8FDCF830 /* ResourceGaugeRing.swift */; };
 		6B294FD1A33C8189FACB5FE2 /* ContainerDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D5045295CEB6437D843E93 /* ContainerDetail.swift */; };
+		7214F3BAA16AC6B6BEEAFABF /* KernelInstallProgress+Localized.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB49D54808ED5C64D01F6CE6 /* KernelInstallProgress+Localized.swift */; };
 		794D486EF73BA464B2234CB0 /* EngineStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47CB2ED53AAEA5299EE14B5 /* EngineStatusBar.swift */; };
 		8BC5F30BB93025DC4D705830 /* SystemStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FC1EE053CD26B78D2438C7D /* SystemStatus.swift */; };
 		8CBC2B86A6A5C1E5D9F56432 /* KapselApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B47A03BCBD8FD4F0AB6286A /* KapselApp.swift */; };
@@ -29,6 +35,7 @@
 		A44F8F65AD854C8B36332378 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE8E8B4CF07774CD5A9553A /* AppLanguage.swift */; };
 		A6FADF58ACCA05082EC933C7 /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DE2CD23878B7D8BE7B187B /* MenuBarContent.swift */; };
 		A70917A82D2E125DDDF3C07C /* Container.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071E080CCC9F957A74FFCAB4 /* Container.swift */; };
+		A97C7E105A142C8DFE66AD03 /* BuildKitOperationProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16582475560231385AF402C /* BuildKitOperationProgress.swift */; };
 		ACAF9C1D6BCC712EE8668887 /* ContainerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5854A50FD512EAB7A216E700 /* ContainerService.swift */; };
 		B887FE9527376DE146A7369F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7570BB40377315B16DEAF9C /* SettingsView.swift */; };
 		BC1964D93B28D395CC448C01 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4C0E8B7E2B575681C93665B /* MainView.swift */; };
@@ -48,6 +55,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		04874A73A66ACC45695F0C60 /* KernelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KernelService.swift; sourceTree = "<group>"; };
 		071E080CCC9F957A74FFCAB4 /* Container.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Container.swift; sourceTree = "<group>"; };
 		0A8E3C602C92B117D0380E20 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		0B47A03BCBD8FD4F0AB6286A /* KapselApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KapselApp.swift; sourceTree = "<group>"; };
@@ -66,15 +74,21 @@
 		6C69311E7D390DA1B43BD83A /* Image.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Image.swift; sourceTree = "<group>"; };
 		739254F129EC4C81C9D4BEAB /* SystemService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemService.swift; sourceTree = "<group>"; };
 		781F78DE9519820E28ED71E5 /* ContainerCreateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerCreateView.swift; sourceTree = "<group>"; };
+		8AD960A8DB3BD5BCF7CA5244 /* BuildKitKernelControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildKitKernelControls.swift; sourceTree = "<group>"; };
+		8F2F5BFD11A3C91BC914FC7E /* SidebarFocus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarFocus.swift; sourceTree = "<group>"; };
 		8FC1EE053CD26B78D2438C7D /* SystemStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemStatus.swift; sourceTree = "<group>"; };
 		A0BB14EE106CCFBAA5CC5D5B /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
 		A411E0513EEAFBA765D52031 /* ImageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageService.swift; sourceTree = "<group>"; };
 		A4C0E8B7E2B575681C93665B /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		A7570BB40377315B16DEAF9C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B1001C66B7B526DF8FDCF830 /* ResourceGaugeRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceGaugeRing.swift; sourceTree = "<group>"; };
 		B98A990A884530E46342926C /* CLIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIService.swift; sourceTree = "<group>"; };
 		BDE8E8B4CF07774CD5A9553A /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
 		CA59B91925D3D0F0766169A1 /* Kapsel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kapsel.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CB49D54808ED5C64D01F6CE6 /* KernelInstallProgress+Localized.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "KernelInstallProgress+Localized.swift"; sourceTree = "<group>"; };
+		E16582475560231385AF402C /* BuildKitOperationProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildKitOperationProgress.swift; sourceTree = "<group>"; };
 		ED3A8426B7B2B35C32C88D4C /* EngineStatusModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineStatusModel.swift; sourceTree = "<group>"; };
+		EFE072002D99788CE03B0737 /* KernelConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KernelConfiguration.swift; sourceTree = "<group>"; };
 		F0747801F7C8AC6295C7DB2A /* SystemServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemServiceView.swift; sourceTree = "<group>"; };
 		F12D5D3EE528CAFE8E84A4D9 /* libKapselKit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libKapselKit.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		F47CB2ED53AAEA5299EE14B5 /* EngineStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineStatusBar.swift; sourceTree = "<group>"; };
@@ -92,6 +106,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		00105D977722532B60A5876C /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				8F2F5BFD11A3C91BC914FC7E /* SidebarFocus.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
 		299D31DE2B7F1BF8E0DC9AF2 /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -99,6 +121,7 @@
 				5854A50FD512EAB7A216E700 /* ContainerService.swift */,
 				36F7AFBD46085BB9533B7EB0 /* EngineInstallService.swift */,
 				A411E0513EEAFBA765D52031 /* ImageService.swift */,
+				04874A73A66ACC45695F0C60 /* KernelService.swift */,
 				739254F129EC4C81C9D4BEAB /* SystemService.swift */,
 			);
 			path = Services;
@@ -107,9 +130,12 @@
 		2E2B16E5F1BC20E74DDB28E5 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				8AD960A8DB3BD5BCF7CA5244 /* BuildKitKernelControls.swift */,
+				E16582475560231385AF402C /* BuildKitOperationProgress.swift */,
 				2414AD50165030922D989757 /* EngineSetupBanner.swift */,
 				F47CB2ED53AAEA5299EE14B5 /* EngineStatusBar.swift */,
 				17DE2CD23878B7D8BE7B187B /* MenuBarContent.swift */,
+				B1001C66B7B526DF8FDCF830 /* ResourceGaugeRing.swift */,
 				4316AE862BCC9827B9DF6B85 /* StatusBadge.swift */,
 				A0BB14EE106CCFBAA5CC5D5B /* TerminalView.swift */,
 			);
@@ -140,6 +166,7 @@
 				071E080CCC9F957A74FFCAB4 /* Container.swift */,
 				26D5045295CEB6437D843E93 /* ContainerDetail.swift */,
 				6C69311E7D390DA1B43BD83A /* Image.swift */,
+				EFE072002D99788CE03B0737 /* KernelConfiguration.swift */,
 				8FC1EE053CD26B78D2438C7D /* SystemStatus.swift */,
 			);
 			path = Models;
@@ -184,7 +211,9 @@
 				BDE8E8B4CF07774CD5A9553A /* AppLanguage.swift */,
 				ED3A8426B7B2B35C32C88D4C /* EngineStatusModel.swift */,
 				0B47A03BCBD8FD4F0AB6286A /* KapselApp.swift */,
+				CB49D54808ED5C64D01F6CE6 /* KernelInstallProgress+Localized.swift */,
 				2E2B16E5F1BC20E74DDB28E5 /* Components */,
+				00105D977722532B60A5876C /* Navigation */,
 				F93C6C517BAC4F86549F0929 /* Resources */,
 				E2058E02584B7831C8F57D8F /* Stores */,
 				BFFFE7E2CB526514C3F3D0C3 /* Views */,
@@ -316,6 +345,8 @@
 				4C89F5499F24561C1121C327 /* EngineInstallService.swift in Sources */,
 				FB2432CF2EA44E1516B3379E /* Image.swift in Sources */,
 				4242DA8E6EF65A98B9C75757 /* ImageService.swift in Sources */,
+				4E8F44ED1FD6E156E9E36B51 /* KernelConfiguration.swift in Sources */,
+				529890105F99437034F29A65 /* KernelService.swift in Sources */,
 				2457583A3515518DA755A5FC /* SystemService.swift in Sources */,
 				8BC5F30BB93025DC4D705830 /* SystemStatus.swift in Sources */,
 			);
@@ -327,6 +358,8 @@
 			files = (
 				A44F8F65AD854C8B36332378 /* AppLanguage.swift in Sources */,
 				61F6DCBAB01BEB9FEB5476D4 /* AppStores.swift in Sources */,
+				061ABE18E0D04500C146B139 /* BuildKitKernelControls.swift in Sources */,
+				A97C7E105A142C8DFE66AD03 /* BuildKitOperationProgress.swift in Sources */,
 				9AF175058BE9A03443631C40 /* ContainerCreateView.swift in Sources */,
 				5B50B1E2AB38CF9781DC0C48 /* ContainerDetailView.swift in Sources */,
 				65626FAD49D9391659BA4FF9 /* ContainerListColumn.swift in Sources */,
@@ -336,9 +369,12 @@
 				EA8ECC5BE0CE664B2AE845C1 /* EngineStatusModel.swift in Sources */,
 				0041D9704E842382843C0228 /* ImageListView.swift in Sources */,
 				8CBC2B86A6A5C1E5D9F56432 /* KapselApp.swift in Sources */,
+				7214F3BAA16AC6B6BEEAFABF /* KernelInstallProgress+Localized.swift in Sources */,
 				BC1964D93B28D395CC448C01 /* MainView.swift in Sources */,
 				A6FADF58ACCA05082EC933C7 /* MenuBarContent.swift in Sources */,
+				6A77203CAAB728B5DF2FF3BB /* ResourceGaugeRing.swift in Sources */,
 				B887FE9527376DE146A7369F /* SettingsView.swift in Sources */,
+				385516E61C3CB10A7A2E84C7 /* SidebarFocus.swift in Sources */,
 				26D6B925B8E8FC6654201BCE /* StatusBadge.swift in Sources */,
 				1BDB5F5D988BCC42016E6A50 /* SystemServiceView.swift in Sources */,
 				A0B06512FC513B92BB460838 /* TerminalView.swift in Sources */,

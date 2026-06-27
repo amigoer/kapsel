@@ -40,7 +40,7 @@ public final class SystemService: Sendable {
         )
     }
 
-    private func fetchBuilderRunning() async -> Bool {
+    func fetchBuilderRunning() async -> Bool {
         do {
             let output = try await cli.run(arguments: ["builder", "status", "--format", "json"])
             guard let data = output.data(using: .utf8) else { return false }
@@ -119,11 +119,35 @@ public final class SystemService: Sendable {
         _ = try await cli.run(arguments: ["system", "property", "clear", id])
     }
     
+    // MARK: - Kernel
+    
+    /// Downloads and installs the recommended Linux kernel for the current architecture
+    public func setRecommendedKernel(onOutput: (@Sendable (String) -> Void)? = nil) async throws {
+        if let onOutput {
+            _ = try await cli.runStream(
+                arguments: ["system", "kernel", "set", "--recommended"],
+                onOutput: onOutput
+            )
+        } else {
+            _ = try await cli.run(arguments: ["system", "kernel", "set", "--recommended"])
+        }
+    }
+    
+    /// Whether a CLI failure indicates the default kernel has not been configured yet
+    public static func requiresKernelConfiguration(_ error: Error) -> Bool {
+        error.localizedDescription.localizedCaseInsensitiveContains("default kernel not configured")
+    }
+    
     // MARK: - Builder (BuildKit)
     
     /// Spawns and starts the BuildKit virtual compile guest VM
     public func startBuilder() async throws {
         _ = try await cli.run(arguments: ["builder", "start"])
+    }
+
+    /// Stops the BuildKit builder container
+    public func stopBuilder() async throws {
+        _ = try await cli.run(arguments: ["builder", "stop"])
     }
     
     /// Inspects BuildKit service status

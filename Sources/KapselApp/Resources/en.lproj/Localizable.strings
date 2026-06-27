@@ -15,6 +15,14 @@
 
 /* Status Badge */
 "Running" = "Running";
+"Offline" = "Offline";
+"Current Usage" = "Current Usage";
+"VM Allocation" = "VM Allocation";
+"Engine Status" = "Engine Status";
+"VM Limit" = "VM Limit";
+"Available" = "Available";
+"VM Disk" = "VM Disk";
+"Guest filesystem" = "Guest filesystem";
 "Stopped" = "Stopped";
 "Paused" = "Paused";
 "Created" = "Created";
@@ -26,6 +34,7 @@
 "Container Engine Offline" = "Container Engine Offline";
 "The VM guest engine is currently stopped. Please start the engine using the 'System Controls' panel below, or configure the CLI paths in Settings." = "The VM guest engine is currently stopped. Please start the engine using the 'System Controls' panel below, or configure the CLI paths in Settings.";
 "Quick Deploy Container" = "Quick Deploy Container";
+"Start the engine before deploying containers." = "Start the engine before deploying containers.";
 "Enter OCI image name, e.g. nginx:alpine" = "Enter OCI image name, e.g. nginx:alpine";
 "Deploy" = "Deploy";
 "Container %@ successfully deployed in background." = "Container %@ successfully deployed in background.";
@@ -44,6 +53,30 @@
 "Engine VM successfully stopped." = "Engine VM successfully stopped.";
 "Engine VM successfully started." = "Engine VM successfully started.";
 "BuildKit environment successfully started." = "BuildKit environment successfully started.";
+"BuildKit requires a Linux kernel for your Mac's architecture. Install the recommended kernel first." = "BuildKit requires a Linux kernel for your Mac's architecture. Install the recommended kernel first.";
+"Working…" = "Working…";
+"Stopping BuildKit…" = "Stopping BuildKit…";
+"Starting BuildKit…" = "Starting BuildKit…";
+"Shutting down the BuildKit builder service." = "Shutting down the BuildKit builder service.";
+"BuildKit builder successfully stopped." = "BuildKit builder successfully stopped.";
+"Installing recommended kernel…" = "Installing recommended kernel…";
+"Connecting to the BuildKit builder service." = "Connecting to the BuildKit builder service.";
+"Downloading and configuring the Linux kernel. This may take a few minutes — keep Kapsel open." = "Downloading and configuring the Linux kernel. This may take a few minutes — keep Kapsel open.";
+"Kernel installed. Launching the BuildKit builder." = "Kernel installed. Launching the BuildKit builder.";
+"Removing kernel…" = "Removing kernel…";
+"Stopping BuildKit and deleting kernel files from disk." = "Stopping BuildKit and deleting kernel files from disk.";
+"Linux Kernel" = "Linux Kernel";
+"Installed Version" = "Installed Version";
+"Uninstall" = "Uninstall";
+"Uninstall Kernel" = "Uninstall Kernel";
+"Uninstall Linux Kernel?" = "Uninstall Linux Kernel?";
+"BuildKit and container builds will stop working until you install a kernel again. Existing containers are not removed." = "BuildKit and container builds will stop working until you install a kernel again. Existing containers are not removed.";
+"Linux kernel successfully removed." = "Linux kernel successfully removed.";
+"Reading kernel configuration…" = "Reading kernel configuration…";
+"Downloading kernel archive…" = "Downloading kernel archive… %lld%%";
+"Extracting and installing kernel…" = "Extracting and installing kernel…";
+"Stopping BuildKit builder…" = "Stopping BuildKit builder…";
+"Removing kernel files…" = "Removing kernel files…";
 "Images successfully pruned." = "Images successfully pruned.";
 
 /* ContainerListView */

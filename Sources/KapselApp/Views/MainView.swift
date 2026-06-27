@@ -16,24 +16,30 @@ struct MainView: View {
 
     @Binding var selection: NavigationItem?
     @Binding var selectedContainerName: String?
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @FocusState private var sidebarFocused: Bool
 
     var body: some View {
-        Group {
-            if selection == .containers {
-                containersLayout
-            } else {
-                simpleLayout
+        NavigationSplitView {
+            sidebar
+                .focusSection()
+                .focused($sidebarFocused)
+        } detail: {
+            detailRoot
+        }
+        .environment(\.restoreSidebarFocus) { @Sendable in
+            Task { @MainActor in
+                sidebarFocused = true
             }
         }
         .onAppear {
             engineRuntime.startMonitoring()
+            sidebarFocused = true
         }
         .onChange(of: selection) { _, _ in
-            columnVisibility = .all
             if selection != .containers {
                 selectedContainerName = nil
             }
+            sidebarFocused = true
         }
         .onChange(of: engineStatus.installStatus) { _, _ in
             Task { await engineRuntime.refresh() }
@@ -43,29 +49,17 @@ struct MainView: View {
     private var sidebar: some View {
         List(selection: $selection) {
             Section("Management") {
-                NavigationLink(value: NavigationItem.dashboard) {
-                    Label("Dashboard", systemImage: "gauge.open.with.lines.needle.33percent")
-                }
-                NavigationLink(value: NavigationItem.containers) {
-                    Label("Containers", systemImage: "shippingbox.fill")
-                }
-                NavigationLink(value: NavigationItem.images) {
-                    Label("Images", systemImage: "photo.stack")
-                }
+                sidebarRow("Dashboard", systemImage: "gauge.open.with.lines.needle.33percent", item: .dashboard)
+                sidebarRow("Containers", systemImage: "shippingbox.fill", item: .containers)
+                sidebarRow("Images", systemImage: "photo.stack", item: .images)
             }
 
             Section("System") {
-                NavigationLink(value: NavigationItem.system) {
-                    Label("Services", systemImage: "server.rack")
-                }
-                NavigationLink(value: NavigationItem.settings) {
-                    Label("Settings", systemImage: "gearshape")
-                }
+                sidebarRow("Services", systemImage: "server.rack", item: .system)
+                sidebarRow("Settings", systemImage: "gearshape", item: .settings)
             }
         }
         .listStyle(.sidebar)
-        .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 260)
-        .navigationTitle("Kapsel")
         .safeAreaInset(edge: .bottom, spacing: 0) {
             EngineStatusBar(
                 statusText: statusText,
@@ -76,54 +70,24 @@ struct MainView: View {
                 isDisabled: engineStatus.isChecking || !engineStatus.isCLIInstalled,
                 onToggle: { Task { await engineRuntime.toggle() } }
             )
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(.bar)
         }
+        .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 260)
+        .navigationTitle("Kapsel")
     }
 
-    private var containersLayout: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            sidebar
-        } content: {
-            ContainerListColumn(selection: $selectedContainerName)
-                .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 420)
-        } detail: {
-            ZStack {
-                containersDetail
-                    .id(selectedContainerName)
-                    .transition(.opacity)
-            }
-            .animation(.smooth(duration: 0.22), value: selectedContainerName)
-        }
+    private func sidebarRow(_ title: LocalizedStringKey, systemImage: String, item: NavigationItem) -> some View {
+        Label(title, systemImage: systemImage)
+            .tag(item)
     }
 
     @ViewBuilder
-    private var containersDetail: some View {
-        if let selectedContainerName {
-            ContainerDetailView(containerName: selectedContainerName)
-        } else {
-            ContentUnavailableView(
-                "Select a Container",
-                systemImage: "shippingbox",
-                description: Text("Choose a container from the list to view details.")
-            )
-        }
-    }
-
-    private var simpleLayout: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            sidebar
-        } detail: {
-            ZStack {
-                simpleDetail
-                    .id(selection)
-                    .transition(.opacity)
-            }
-            .animation(.smooth(duration: 0.22), value: selection)
-        }
-    }
-
-    @ViewBuilder
-    private var simpleDetail: some View {
+    private var detailRoot: some View {
         switch selection {
+        case .containers:
+            containersDetailSplit
         case .dashboard:
             DashboardView()
         case .images:
@@ -138,8 +102,24 @@ struct MainView: View {
                 systemImage: "sidebar.left",
                 description: Text("Please select a management page from the sidebar")
             )
-        case .containers:
-            EmptyView()
+        }
+    }
+
+    private var containersDetailSplit: some View {
+        NavigationSplitView {
+            ContainerListColumn(selection: $selectedContainerName)
+                .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 420)
+        } detail: {
+            if let selectedContainerName {
+                ContainerDetailView(containerName: selectedContainerName)
+                    .id(selectedContainerName)
+            } else {
+                ContentUnavailableView(
+                    "Select a Container",
+                    systemImage: "shippingbox",
+                    description: Text("Choose a container from the list to view details.")
+                )
+            }
         }
     }
 

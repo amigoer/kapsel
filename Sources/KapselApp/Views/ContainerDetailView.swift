@@ -21,9 +21,7 @@ struct ContainerDetailView: View {
     
     var body: some View {
         Group {
-            if isLoading {
-                ProgressView("Loading container configuration...")
-            } else if let error = errorMessage {
+            if let error = errorMessage {
                 ContentUnavailableView {
                     Label("Failed to Load Configuration", systemImage: "exclamationmark.triangle")
                 } description: {
@@ -35,6 +33,11 @@ struct ContainerDetailView: View {
                 }
             } else if detail != nil {
                 detailTabs
+            }
+        }
+        .overlay {
+            if isLoading, detail == nil, errorMessage == nil {
+                ProgressView("Loading container configuration...")
             }
         }
         .navigationTitle(containerName)
@@ -51,6 +54,7 @@ struct ContainerDetailView: View {
                 fetchLogs()
             }
         }
+        .restoreSidebarFocusWhenLoaded(detail != nil || errorMessage != nil)
     }
 
     @ViewBuilder

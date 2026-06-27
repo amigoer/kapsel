@@ -35,6 +35,8 @@ final class DashboardStore {
     private(set) var imageCount = 0
     private(set) var isVMRunning = false
     private(set) var isBuilderRunning = false
+    private(set) var kernelInstalled = false
+    private(set) var kernelVersion: String?
     private(set) var hasLoaded = false
 
     private var inFlight = false
@@ -54,27 +56,40 @@ final class DashboardStore {
             let status = try await SystemService.shared.getSystemStatus()
             isVMRunning = status.isRunning
             isBuilderRunning = status.builderRunning
+            hasLoaded = true
 
-            if isVMRunning {
+            if let kernel = try? await KernelService.shared.getConfiguration() {
+                kernelInstalled = kernel.isInstalled
+                kernelVersion = kernel.versionLabel
+            }
+
+            guard isVMRunning else {
+                containerCount = 0
+                runningContainerCount = 0
+                imageCount = 0
+                return
+            }
+
+            do {
                 let containers = try await ContainerService.shared.fetchContainers(showAll: true)
                 containerCount = containers.count
                 runningContainerCount = containers.filter { $0.status == .running }.count
                 imageCount = try await ImageService.shared.fetchImages().count
-            } else {
-                containerCount = 0
-                runningContainerCount = 0
-                imageCount = 0
+            } catch {
+                print("Failed to fetch dashboard metrics: \(error)")
             }
-            hasLoaded = true
         } catch {
             reset()
-            print("Failed to fetch dashboard metrics: \(error)")
+            hasLoaded = true
+            print("Failed to fetch system status: \(error)")
         }
     }
 
     private func reset() {
         isVMRunning = false
         isBuilderRunning = false
+        kernelInstalled = false
+        kernelVersion = nil
         containerCount = 0
         runningContainerCount = 0
         imageCount = 0
@@ -111,6 +126,8 @@ final class ImagesStore {
 final class SystemStore {
     private(set) var engineRunning = false
     private(set) var builderRunning = false
+    private(set) var kernelInstalled = false
+    private(set) var kernelVersion: String?
     private(set) var dnsDomain = ""
     private(set) var systemLogs = ""
     private(set) var systemProperties = ""
@@ -130,24 +147,36 @@ final class SystemStore {
             engineRunning = status.isRunning
             dnsDomain = status.dnsDomain ?? ""
             builderRunning = status.builderRunning
+            hasLoaded = true
+
+            if let kernel = try? await KernelService.shared.getConfiguration() {
+                kernelInstalled = kernel.isInstalled
+                kernelVersion = kernel.versionLabel
+            }
 
             if engineRunning {
-                systemProperties = try await SystemService.shared.getProperties()
-                registryStatus = try await SystemService.shared.listRegistries()
-                systemLogs = try await SystemService.shared.getSystemLogs()
+                systemProperties = (try? await SystemService.shared.getProperties())
+                    ?? String(localized: "Engine is offline. VM properties are not loaded.")
+                registryStatus = (try? await SystemService.shared.listRegistries())
+                    ?? String(localized: "Engine is offline. Private registries not loaded.")
+                systemLogs = (try? await SystemService.shared.getSystemLogs())
+                    ?? String(localized: "Engine is offline. System logs are empty.")
             } else {
                 systemProperties = String(localized: "Engine is offline. VM properties are not loaded.")
                 registryStatus = String(localized: "Engine is offline. Private registries not loaded.")
                 systemLogs = String(localized: "Engine is offline. System logs are empty.")
             }
             errorMessage = nil
-            hasLoaded = true
         } catch {
             engineRunning = false
+            builderRunning = false
+            kernelInstalled = false
+            kernelVersion = nil
             systemProperties = String(localized: "Engine is offline. VM properties are not loaded.")
             registryStatus = String(localized: "Engine is offline. Private registries not loaded.")
             systemLogs = String(localized: "Engine is offline. System logs are empty.")
             errorMessage = String(localized: "Failed to load system status: \(error.localizedDescription)")
+            hasLoaded = true
         }
     }
 }

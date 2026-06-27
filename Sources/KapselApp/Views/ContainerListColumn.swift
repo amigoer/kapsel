@@ -25,9 +25,7 @@ struct ContainerListColumn: View {
 
     var body: some View {
         Group {
-            if !store.hasLoaded {
-                ProgressView("Loading container list...")
-            } else if filteredContainers.isEmpty {
+            if filteredContainers.isEmpty {
                 ContentUnavailableView {
                     Label("No Containers Found", systemImage: "shippingbox")
                 } description: {
@@ -49,8 +47,15 @@ struct ContainerListColumn: View {
                 }
             }
         }
+        .overlay {
+            if !store.hasLoaded {
+                ProgressView("Loading container list...")
+            }
+        }
+        .disabled(!store.hasLoaded)
         .navigationTitle("Containers")
         .navigationSubtitle("\(runningCount) running")
+        .restoreSidebarFocusWhenLoaded(store.hasLoaded)
         .searchable(text: $searchText, prompt: Text("Search by name or image..."))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

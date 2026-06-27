@@ -4,14 +4,19 @@
 
 # Build artifacts
 build/
+Build/
 DerivedData/
 *.dSYM/
 *.dSYM.zip
 *.ipa
 *.xcarchive
+*.hmap
+*.linkFileList
 
 # User settings
 xcuserdata/
+**/xcuserdata/
+*.xcuserstate
 *.xcuserdatad
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
@@ -29,6 +34,12 @@ xcuserdata/
 *.xccheckout
 *.xcscmblueprint
 
+# Xcode test & coverage
+*.xcresult
+*.profraw
+*.profdata
+coverage/
+
 # Carthage
 Carthage/Build/
 
@@ -37,6 +48,9 @@ Carthage/Build/
 .swiftpm/
 Packages/
 Package.pins
+
+# CocoaPods
+Pods/
 
 # macOS Finder files
 .DS_Store
@@ -51,8 +65,20 @@ Icon?
 *.swp
 *~
 .cursor/
+.agents/
 
-# Local configuration files
+# Logs & temp files
+*.log
+*.tmp
+*.temp
+*.orig
+*.rej
+
+# Local configuration & secrets
 .env
 .env.local
 .env.*.local
+*.pem
+*.p12
+credentials.json
+secrets.json
