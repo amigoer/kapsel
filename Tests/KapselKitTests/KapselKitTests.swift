@@ -86,6 +86,38 @@ final class KapselKitTests: XCTestCase {
         XCTAssertFalse(SystemService.requiresKernelConfiguration(CLIError.invalidOutput))
     }
 
+    func testParseContainersNestedConfiguration() {
+        let json = """
+        [{"configuration":{"id":"buildkit","creationDate":"2026-06-27T04:30:25Z","image":{"reference":"ghcr.io/apple/container-builder-shim/builder:0.12.0"},"platform":{"architecture":"arm64","os":"linux","variant":"v8"},"resources":{"cpuOverhead":1,"cpus":2,"memoryInBytes":2147483648},"networks":[{"network":"default","options":{"hostname":"buildkit"}}]},"id":"buildkit","status":{"networks":[],"state":"stopped"}}]
+        """
+        let containers = ContainerService.parseContainers(from: json)
+        XCTAssertEqual(containers.count, 1)
+        let container = containers[0]
+        XCTAssertEqual(container.containerID, "buildkit")
+        XCTAssertEqual(container.name, "buildkit")
+        XCTAssertEqual(container.image, "ghcr.io/apple/container-builder-shim/builder:0.12.0")
+        XCTAssertEqual(container.status, .stopped)
+        XCTAssertEqual(container.os, "linux")
+        XCTAssertEqual(container.arch, "arm64")
+        XCTAssertEqual(container.cpus, 2)
+        XCTAssertEqual(container.memory, "2G")
+    }
+
+    func testParseContainersRunningWithAddress() {
+        let json = """
+        [{"configuration":{"id":"web","image":{"reference":"nginx:alpine"},"platform":{"architecture":"arm64","os":"linux"}},"status":{"state":"running","networks":[{"address":"192.168.64.3"}]}}]
+        """
+        let containers = ContainerService.parseContainers(from: json)
+        XCTAssertEqual(containers.count, 1)
+        XCTAssertEqual(containers[0].status, .running)
+        XCTAssertEqual(containers[0].address, "192.168.64.3")
+    }
+
+    func testParseContainersToleratesBadInput() {
+        XCTAssertEqual(ContainerService.parseContainers(from: "[]").count, 0)
+        XCTAssertEqual(ContainerService.parseContainers(from: "not json").count, 0)
+    }
+
     func testKernelConfigurationParsing() {
         let propertyList = """
         [kernel]

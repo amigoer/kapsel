@@ -47,13 +47,18 @@ struct BuildKitKernelControls: View {
                     .disabled(!engineRunning || !cliInstalled || builderRunning)
                 }
             } label: {
-                Label("Linux Kernel", systemImage: "memorychip")
-            }
-
-            if let kernelVersion {
-                LabeledContent("Installed Version") {
-                    Text(kernelVersion)
-                        .monospacedDigit()
+                Label {
+                    HStack(spacing: 6) {
+                        Text("Linux Kernel")
+                        if let kernelVersion {
+                            Text(kernelVersion)
+                                .font(.caption)
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: "memorychip")
                 }
             }
         }

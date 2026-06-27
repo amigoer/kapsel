@@ -13,6 +13,7 @@ struct DashboardView: View {
     @State private var isQuickRunning: Bool = false
     @State private var runSuccessMessage: String? = nil
     @State private var runErrorMessage: String? = nil
+    @FocusState private var isQuickRunFieldFocused: Bool
 
     @State private var controlErrorMessage: String? = nil
     @State private var controlSuccessMessage: String? = nil
@@ -117,6 +118,7 @@ struct DashboardView: View {
                     HStack(spacing: 12) {
                         TextField("Enter OCI image name, e.g. nginx:alpine", text: $quickRunImage)
                             .textFieldStyle(.roundedBorder)
+                            .focused($isQuickRunFieldFocused)
                             .disabled(isQuickRunning || !engineRuntime.isRunning || !engineStatus.isCLIInstalled)
                             .onSubmit { quickRunContainer() }
 
@@ -210,6 +212,8 @@ struct DashboardView: View {
             }
         }
         .formStyle(.grouped)
+        .contentShape(.rect)
+        .onTapGesture { isQuickRunFieldFocused = false }
         .navigationTitle("System Monitor")
         .toolbar {
             ToolbarItem(placement: .automatic) {
@@ -308,6 +312,7 @@ struct DashboardView: View {
 
     private func quickRunContainer() {
         guard !quickRunImage.isEmpty else { return }
+        isQuickRunFieldFocused = false
         isQuickRunning = true
         runErrorMessage = nil
         runSuccessMessage = nil

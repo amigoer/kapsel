@@ -18,13 +18,29 @@ struct MainView: View {
     @Binding var selectedContainerName: String?
     @FocusState private var sidebarFocused: Bool
 
+    /// Fixed sidebar width keeps it identical across two-/three-column tab switches.
+    private let sidebarWidth: CGFloat = 264
+
     var body: some View {
-        NavigationSplitView {
-            sidebar
-                .focusSection()
-                .focused($sidebarFocused)
-        } detail: {
-            detailRoot
+        Group {
+            if selection == .containers {
+                // Three columns: sidebar + container list + detail
+                NavigationSplitView {
+                    sidebarColumn
+                } content: {
+                    ContainerListColumn(selection: $selectedContainerName)
+                        .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 460)
+                } detail: {
+                    containerDetail
+                }
+            } else {
+                // Two columns: sidebar + detail
+                NavigationSplitView {
+                    sidebarColumn
+                } detail: {
+                    detailRoot
+                }
+            }
         }
         .environment(\.restoreSidebarFocus) { @Sendable in
             Task { @MainActor in
@@ -35,8 +51,8 @@ struct MainView: View {
             engineRuntime.startMonitoring()
             sidebarFocused = true
         }
-        .onChange(of: selection) { _, _ in
-            if selection != .containers {
+        .onChange(of: selection) { _, newValue in
+            if newValue != .containers {
                 selectedContainerName = nil
             }
             sidebarFocused = true
@@ -44,6 +60,13 @@ struct MainView: View {
         .onChange(of: engineStatus.installStatus) { _, _ in
             Task { await engineRuntime.refresh() }
         }
+    }
+
+    private var sidebarColumn: some View {
+        sidebar
+            .focusSection()
+            .focused($sidebarFocused)
+            .navigationSplitViewColumnWidth(sidebarWidth)
     }
 
     private var sidebar: some View {
@@ -74,7 +97,6 @@ struct MainView: View {
             .padding(.vertical, 10)
             .background(.bar)
         }
-        .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 260)
         .navigationTitle("Kapsel")
     }
 
@@ -86,8 +108,6 @@ struct MainView: View {
     @ViewBuilder
     private var detailRoot: some View {
         switch selection {
-        case .containers:
-            containersDetailSplit
         case .dashboard:
             DashboardView()
         case .images:
@@ -96,7 +116,7 @@ struct MainView: View {
             SystemServiceView()
         case .settings:
             SettingsView()
-        case nil:
+        case .containers, nil:
             ContentUnavailableView(
                 "No Item Selected",
                 systemImage: "sidebar.left",
@@ -105,21 +125,17 @@ struct MainView: View {
         }
     }
 
-    private var containersDetailSplit: some View {
-        NavigationSplitView {
-            ContainerListColumn(selection: $selectedContainerName)
-                .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 420)
-        } detail: {
-            if let selectedContainerName {
-                ContainerDetailView(containerName: selectedContainerName)
-                    .id(selectedContainerName)
-            } else {
-                ContentUnavailableView(
-                    "Select a Container",
-                    systemImage: "shippingbox",
-                    description: Text("Choose a container from the list to view details.")
-                )
-            }
+    @ViewBuilder
+    private var containerDetail: some View {
+        if let selectedContainerName {
+            ContainerDetailView(containerName: selectedContainerName)
+                .id(selectedContainerName)
+        } else {
+            ContentUnavailableView(
+                "Select a Container",
+                systemImage: "shippingbox",
+                description: Text("Choose a container from the list to view details.")
+            )
         }
     }
 

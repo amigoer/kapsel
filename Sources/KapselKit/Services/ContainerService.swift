@@ -18,7 +18,98 @@ public final class ContainerService: Sendable {
         if showAll {
             args.append("--all")
         }
-        return try await cli.runAndDecodeJSON(arguments: args, type: [Container].self)
+        args.append(contentsOf: ["--format", "json"])
+        let raw = try await cli.run(arguments: args)
+        return Self.parseContainers(from: raw)
+    }
+
+    /// Parses `container ls --format json` output, tolerating the nested
+    /// `configuration` shape and both string / object `status` variants.
+    static func parseContainers(from raw: String) -> [Container] {
+        guard let data = raw.data(using: .utf8),
+              let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return []
+        }
+        return array.compactMap { parseContainer(from: $0) }
+    }
+
+    private static func parseContainer(from dict: [String: Any]) -> Container? {
+        let config = dict["configuration"] as? [String: Any] ?? dict
+
+        let id = (config["id"] as? String) ?? (dict["id"] as? String) ?? ""
+        guard !id.isEmpty else { return nil }
+
+        var image = ""
+        if let imageObj = config["image"] as? [String: Any] {
+            image = imageObj["reference"] as? String ?? ""
+        } else if let imageStr = config["image"] as? String {
+            image = imageStr
+        }
+
+        var os = "linux"
+        var arch = "arm64"
+        if let platform = config["platform"] as? [String: Any] {
+            os = platform["os"] as? String ?? os
+            arch = platform["architecture"] as? String ?? arch
+        }
+
+        var cpus: Int?
+        var memory: String?
+        if let resources = config["resources"] as? [String: Any] {
+            cpus = (resources["cpus"] as? NSNumber)?.intValue
+            if let memBytes = (resources["memoryInBytes"] as? NSNumber)?.int64Value {
+                memory = formatMemory(memBytes)
+            }
+        }
+
+        var status = Container.Status.unknown
+        var address: String?
+
+        if let statusStr = dict["status"] as? String {
+            status = Container.Status(rawValue: statusStr) ?? .unknown
+        } else if let statusObj = dict["status"] as? [String: Any] {
+            let state = (statusObj["state"] as? String) ?? "unknown"
+            status = Container.Status(rawValue: state) ?? .unknown
+            address = firstAddress(in: statusObj["networks"])
+        }
+
+        if address == nil {
+            address = firstAddress(in: dict["networks"]) ?? firstAddress(in: config["networks"])
+        }
+
+        let createdAt = config["creationDate"] as? String
+
+        return Container(
+            containerID: id,
+            name: id,
+            image: image,
+            status: status,
+            address: address,
+            createdAt: createdAt,
+            os: os,
+            arch: arch,
+            cpus: cpus,
+            memory: memory
+        )
+    }
+
+    private static func firstAddress(in networks: Any?) -> String? {
+        guard let entries = networks as? [[String: Any]] else { return nil }
+        for entry in entries {
+            if let address = entry["address"] as? String, !address.isEmpty {
+                return address
+            }
+        }
+        return nil
+    }
+
+    private static func formatMemory(_ bytes: Int64) -> String {
+        let gb = Double(bytes) / 1_073_741_824
+        if gb >= 1 {
+            return String(format: gb.truncatingRemainder(dividingBy: 1) == 0 ? "%.0fG" : "%.1fG", gb)
+        }
+        let mb = Double(bytes) / 1_048_576
+        return String(format: "%.0fM", mb)
     }
     
     /// Starts a stopped container

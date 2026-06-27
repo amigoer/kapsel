@@ -66,7 +66,7 @@ struct ContainerListColumn: View {
                 }
             }
 
-            ToolbarItem(placement: .automatic) {
+            ToolbarItem(placement: .secondaryAction) {
                 Toggle("Show All Containers", isOn: $showAll)
                     .toggleStyle(.checkbox)
                     .onChange(of: showAll) { _, _ in
@@ -74,7 +74,7 @@ struct ContainerListColumn: View {
                     }
             }
 
-            ToolbarItem(placement: .automatic) {
+            ToolbarItem(placement: .secondaryAction) {
                 Button {
                     Task { await loadContainers() }
                 } label: {

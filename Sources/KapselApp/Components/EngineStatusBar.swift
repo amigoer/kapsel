@@ -11,24 +11,25 @@ struct EngineStatusBar: View {
     let onToggle: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Label {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(LocalizedStringKey(statusText))
-                        .font(.callout)
-                    Text(LocalizedStringKey(statusSubtitle))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-            } icon: {
-                Image(systemName: "circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(statusColor)
-            }
-            .labelStyle(.titleAndIcon)
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 8))
+                .foregroundStyle(statusColor)
 
-            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(LocalizedStringKey(statusText))
+                    .font(.callout)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(LocalizedStringKey(statusSubtitle))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .layoutPriority(1)
+
+            Spacer(minLength: 4)
 
             Group {
                 if isLoading {
@@ -36,22 +37,19 @@ struct EngineStatusBar: View {
                         .controlSize(.small)
                 } else {
                     Button(action: onToggle) {
-                        Label(
-                            engineRunning ? "Stop Engine" : "Start Engine",
-                            systemImage: engineRunning ? "stop.fill" : "play.fill"
-                        )
-                        .labelStyle(.iconOnly)
+                        Image(systemName: engineRunning ? "stop.fill" : "play.fill")
                     }
                     .buttonStyle(.borderless)
                     .controlSize(.regular)
                     .help(engineRunning ? "Stop Engine" : "Start Engine")
                 }
             }
-            .frame(width: 28, height: 28)
+            .frame(width: 24, height: 24)
         }
         .padding(.vertical, 4)
         .disabled(isDisabled && !isLoading)
         .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(LocalizedStringKey(statusText)))
     }
 }
 
