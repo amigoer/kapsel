@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Run unit tests
+        run: swift test
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build Release app
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          xcodebuild \
+            -project Kapsel.xcodeproj \
+            -scheme Kapsel \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build \
+            MARKETING_VERSION="$VERSION" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      - name: Package app bundle
+        run: |
+          set -euo pipefail
+          APP="build/Build/Products/Release/Kapsel.app"
+          test -d "$APP"
+          ZIP="Kapsel-${GITHUB_REF_NAME}-macOS.zip"
+          ditto -c -k --keepParent "$APP" "$ZIP"
+          echo "ASSET=$ZIP" >> "$GITHUB_ENV"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ASSET }}
+          generate_release_notes: true
+          body: |
+            ## Kapsel ${{ github.ref_name }}
+
+            原生 macOS GUI 客户端，用于管理 [apple/container](https://github.com/apple/container)。
+
+            ### 安装
+            1. 下载并解压 `Kapsel-${{ github.ref_name }}-macOS.zip`
+            2. 将 `Kapsel.app` 拖入「应用程序」
+            3. 首次启动：右键点按 App → 选择「打开」（应用未经 Apple 公证）
+
+            若提示「已损坏，无法打开」，在终端执行后重试：
+            ```
+            xattr -dr com.apple.quarantine /Applications/Kapsel.app
+            ```
+
+            > 需先安装 [apple/container](https://github.com/apple/container) CLI 与运行引擎。
